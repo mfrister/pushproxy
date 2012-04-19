@@ -1,0 +1,6 @@
+*.dSYM
+*.pyc
+/certs/courier.push.apple.com
+/certs/device/
+/certs/server/
+/src/data/
