@@ -45,6 +45,8 @@ You can find the extracted certificates in `certs/device`. Both public and priva
 
 ### Extract OS X Certificates
 
+Note: If you want to connect at least one device via a patched push daemon, you need to patch the push daemon on OS X first.
+
 OS X stores the certificates in the `/Library/Keychains/applepushserviced` keychain.
 
 To ensure only the push certificate is in this keychain, delete the applepushserviced keychain, so it activates and creates a new keychain entry. You may try without this step, but if the keychain has other entries, the following steps may fail.
@@ -107,9 +109,14 @@ You can find instructions on how to do this manually in `doc/howto-patch-apsd.md
 
 #### OS X applepushserviced patch
 
-I haven't automated this step yet, but all you have to do is **replacing** all occurrences of `push.apple.com` with your own 14-characters domain name and codesign the binary:
+Like the iOS patch step, this step assumes there is a codesign certificate in your keychain named `iPhone Developer`.
 
-    codesign -f -s "iPhone Developer" applepushserviced
+    cd pushproxy
+    setup/osx/patch-applepushserviced <14-char DNS entry>
+
+This modifies `/System/Library/PrivateFrameworks/ApplePushService.framework/applepushserviced` and place a backup in the same directory named `applepushserviced.orig`.
+
+After a restart the `applepushserviced` would request a new certificate from Apple since the binary has a new signature, so Keychain doesn't allow it to access the old certificate. So just do the 'Extract OS X Certificates' step which includes a restart anyway.
 
 ## Running
 
