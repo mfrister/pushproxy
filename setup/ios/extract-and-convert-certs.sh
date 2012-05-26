@@ -13,7 +13,7 @@ TMPDIR=certs/device/tmp
 mkdir -p "$TMPDIR"
 
 IOS_HOST="$1"
-scp tools/PushFix/nimble "$IOS_HOST":/private/var/Keychains
+scp setup/ios/nimble "$IOS_HOST":/private/var/Keychains
 ssh "$IOS_HOST" 'cd /private/var/Keychains && chmod +x nimble && ./nimble'
 
 # cd to somewhere in iphone-certs here
