@@ -1,6 +1,6 @@
 # PushProxy
 
-A **man-in-the-middle proxy** for **iOS and OS X Push Notifications**. It decodes the push protocol and outputs the messages it in a readable form. It also provides APIs for handling messages and sending push notifications directly to devices without sending them via Apple's infrastructure.
+PushProxy is a **man-in-the-middle proxy** for **iOS and OS X Push Notifications**. It decodes the push protocol and outputs messages in a readable form. It also provides APIs for handling messages and sending push notifications directly to devices without sending them via Apple's infrastructure.
 
 For a reference on the push protocol, see `doc/apple-push-protocol-ios5-lion.md`. iOS4 and earlier used another version of the protocol, described in `doc/apple-push-protocol-ios4.md`. This proxy only supports the iOS5 protocol.
 
