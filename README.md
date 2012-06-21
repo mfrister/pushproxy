@@ -6,6 +6,56 @@ For a reference on the push protocol, see `doc/apple-push-protocol-ios5-lion.md`
 
 I tested only using jailbroken iOS devices, but it may be possible to use a push certificate from a jailbroken device and use it to connect a non-jailbroken device to Apple's servers. At least some apps using push notifications will be confused if you do this, but I think this was a way for hacktivated iPhones to get a push certificate.
 
+## 'Screenshot'
+
+    [InterceptServer,3221,192.168.0.120] SSLInfoCallback: Device connected: B481816D-4650-49EA-977C-9FCBDEB30CB1
+    [InterceptServer,3221,192.168.0.120] connectToServer: 17.172.232.212
+    [InterceptServer,3221,192.168.0.120] Starting factory <icl0ud.push.intercept.InterceptClientFactory instance at 0x2ff15a8>
+    [InterceptServer,3221,192.168.0.120] >>>
+    [InterceptServer,3221,192.168.0.120] <None APSConnect type: 7 fields:
+            {   'pushToken': '4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05',
+                'unknownByte': '\x01'}>
+    [InterceptServer,3221,192.168.0.120] updatePushToken: device B481816D-4650-49EA-977C-9FCBDEB30CB1: push token: 4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05 new: False
+    [InterceptClient,client] <<<
+    [InterceptClient,client] <None APSConnectResponse type: 8 fields:
+            {   'pushToken': None,
+                'status': '\x00',
+                'unknownField1': None,
+                'unknownField2': '\x10\x00',
+                'unknownField3': '\x00\x02'}>
+    [InterceptServer,3221,192.168.0.120] >>>
+    [InterceptServer,3221,192.168.0.120] <None APSTopics type: 9 fields:
+            {   'disabledTopics': [   '8ef2ada7ec87dbb96f12d01c8bcae66218f2c7f2',
+                                        [...]
+                                      'acbd66c71146195b57b2424d3222204f3c97663e'],
+                'enabledTopics': [   '3514994361d84746222445d2deeab3440b22b5d6',
+                                        [...]
+                                     '7f292acab37bed771b36b09e612e395eee13a69a'],
+                'pushToken': None}>
+    [InterceptServer,3221,192.168.0.120] >>>
+    [InterceptServer,3221,192.168.0.120] <None APSKeepAlive type: c fields:
+            {   'carrier': '31038',
+                'hardwareVersion': 'iPhone4,1',
+                'keepAliveInterval': '10',
+                'softwareBuild': '9B206',
+                'softwareVersion': '5.1.1'}>
+    [InterceptClient,client] <<<
+    [InterceptClient,client] <None APSKeepAliveResponse type: d fields:
+            []>
+    [InterceptClient,client] <<<
+    [InterceptClient,client] <None APSNotification type: a fields:
+            {   'expires': datetime.datetime(1970, 1, 1, 0, 59, 59),
+                'payload': '{"aps":{"alert":"Eilmeldung\\nPortugal steht im EM-Halbfinale","sound":"gong.caf"}}',
+                'recipientPushToken': '4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05',
+                'responseToken': '\x00\x00\x00\x00',
+                'timestamp': datetime.datetime(2012, 6, 21, 22, 43, 12, 23465),
+                'topic': '0e3aae221b033cdc667259a5911659acecf9f9ad',
+                'topic_description': None,
+                'unknownString4': '\x00'}>
+    [InterceptServer,3222,192.168.0.120] >>>
+    [InterceptServer,3222,192.168.0.120] <None APSNotificationResponse type: b fields:
+            {   'responseToken': '\x00\x00\x00\x00', 'status': '\x00'}>
+
 ## Setup
 
 The proxy is written in Python, I recommend setting up a virtualenv and installing the requirements:
@@ -155,3 +205,5 @@ Apple provides a [document](http://developer.apple.com/library/ios/#technotes/tn
 
 * Michael Frister
 * Martin Kreichgauer
+
+![pi](https://planb.frister.net/pi/piwik.php?idsite=3&rec=1)
