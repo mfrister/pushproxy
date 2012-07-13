@@ -1,0 +1,12 @@
+This is a little script which will dump the secrets out of an Apple
+keychain if you know the password. Look at extractkeychain.py for details.
+You need to be running on OS X, since it uses Apple's 'security' command-line
+util.
+
+It uses the nifty pyDes code from Todd Whiteman 
+(http://home.pacific.net.au/~twhitema/des.html) for DES - if that
+seems to slow, you can easily switch over to pycrypto (two lines to change
+in extractkeychain.py).
+
+Matt Johnston
+matt at ucc asn au
