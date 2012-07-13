@@ -97,28 +97,13 @@ You can find the extracted certificates in `certs/device`. Both public and priva
 
 Note: If you want to connect at least one device via a patched push daemon, you need to patch the push daemon on OS X first.
 
-OS X stores the certificates in the `/Library/Keychains/applepushserviced` keychain.
+OS X stores the certificates in a keychain in `/Library/Keychains`, either in `applepushserviced.keychain` or in `apsd.keychain`.
 
-To ensure only the push certificate is in this keychain, delete the applepushserviced keychain, so it activates and creates a new keychain entry. You may try without this step, but if the keychain has other entries, the following steps may fail.
+This step extracts the push private key and certificate from the keychain. It stores them in `certs/device/<UUID>.pem`
 
-    sudo rm /Library/Keychains/applepushserviced.keychain
-    sudo killall applepushserviced
+    setup/osx/extract_certificate.py -f
 
-This step extracts the push private key and certificate from the keychain. You may have to click *allow* on some keychain dialog during the process. First the private key:
-
-    cd setup/mac
-    ./compile-extract-private-key.sh
-    python calculate-keychain-password.py > push-private.pem
-
-This should output an RSA private key into `setup/mac/push-private.pem` in PEM form, like:
-
-    -----BEGIN RSA PRIVATE KEY-----
-    ... lots of characters ...
-    -----END RSA PRIVATE KEY-----
-
-Now extract the public key using Keychain Access. You can just drag `/Library/Keychains/applepushserviced.keychain` onto the Keychain Access icon, select the certificate with a UUID as name and export it as PEM. Copy this UUID, you will need it later to name the certificate file. Make sure not to try exporting the private key instead, this will not work.
-
-Now that you have both private and public key in PEM encoding, place both in one file, first the private key and behind it public key. Move this file to `certs/device/<UUID>.pem` using the UUID you copied from Keychain Access before.
+You can remove the -f parameter to get key and certificate on stdout instead of writing them to a file.
 
 ### DNS redirect(WiFi only)
 
@@ -205,5 +190,10 @@ Apple provides a [document](http://developer.apple.com/library/ios/#technotes/tn
 
 * Michael Frister
 * Martin Kreichgauer
+
+## Thanks
+
+* [Matt Johnston](http://www.ucc.asn.au/~matt/apple/) for writing [extractkeychain](http://www.ucc.asn.au/~matt/src/extractkeychain-0.1.tar.gz) that is used for deriving the master key and decrypting keys from the OS X keychain
+* Vladimir "Farcaller" Pouzanov for writing [python-bplist](https://github.com/farcaller/bplist-python) which is included and helps extracting the push private key from the OS X keychain
 
 ![pi](https://planb.frister.net/pi/piwik.php?idsite=3&rec=1)
