@@ -130,6 +130,14 @@ Example *Connect* message
     * none observed
 * answer to *Keep-Alive* message, confirms keep-alive
 
+### 0e Command - NoStorage
+
+* Server -> Device
+* `0e` message type
+* fields
+    * destination: push token as in Connect and Connect Response messages
+* Note: Appeared in 10.8, unknown purpose
+
 ## Note
 
 Mac OS X' push notification is slightly more complicated since it supports multiple users. For example the device sends multiple *Connect* messages, one for the system and one for each user, each with a different push token. This needs to be analyzed further.

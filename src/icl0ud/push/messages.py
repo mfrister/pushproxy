@@ -13,7 +13,7 @@ class APSMessage(object):
     knownValues = {}
     simpleFieldMapping = {}
 
-    def __init__(self, type_ = None, source = None, **kwargs):
+    def __init__(self, type_=None, source=None, **kwargs):
         if type_ is None and self.type is None:
             raise Exception("APSMessage without type created. " +
                             "Either use subclass or type_ argument.")
@@ -25,7 +25,7 @@ class APSMessage(object):
             value = kwargs.get(fieldInfo[0], None)
             setattr(self, fieldInfo[0], value)
 
-    def __repr__(self, fields = None):
+    def __repr__(self, fields=None):
         if not fields:
             if self.simpleFieldMapping:
                 fields = self.fieldsAsDict()
@@ -87,7 +87,7 @@ class APSMessage(object):
                     content = pack('!I', int(time.mktime(fieldValue.timetuple())))
                 elif fieldInfo[1] == 'datetime64':
                     content = pack('!Q', int(time.mktime(fieldValue.timetuple()))
-                                         * 10**9)
+                                         * 10 ** 9)
             fieldLength = len(content)
             marshalledFields.append(chr(type_) +
                                     pack('!H', fieldLength) +
@@ -110,9 +110,11 @@ class APSConnect(APSConnectBase):
     simpleFieldMapping = {
         1: ('pushToken',),
         2: ('unknownByte',),
+        5: ('unknownField5',),  # observed on 10.8, darkWakeEnabled?
     }
     knownValues = {
         2: ('\x01',),
+        5: ('\x00\x00\x00\x01',),
     }
 
 
@@ -193,7 +195,6 @@ class APSNotification(APSMessage):
         super(APSNotification, self).__init__(*args, **kwargs)
         self.biplist = None
 
-
     def parsingFinished(self):
         # decode iMessage biplist payload
         iMessageTopic = 'e4e6d952954168d0a5db02dbaf27cc35fc18d159' \
@@ -219,7 +220,7 @@ class APSNotification(APSMessage):
         if self.expires is not None and type(self.expires) == str:
             fields['expires'] = datetime.fromtimestamp(unpack('!l', self.expires)[0])
         if self.timestamp is not None and type(self.timestamp) == str:
-            seconds = float(unpack('!q', self.timestamp)[0])/1000000000
+            seconds = float(unpack('!q', self.timestamp)[0]) / 1000000000
             fields['timestamp'] = datetime.fromtimestamp(seconds)
 
         return super(APSNotification, self).__repr__(fields)
@@ -252,3 +253,10 @@ class APSKeepAlive(APSMessage):
 
 class APSKeepAliveResponse(APSMessage):
     type = 0x0d
+
+
+class APSNoStorage(APSMessage):
+    type = 0x0e
+    simpleFieldMapping = {
+        1: ('destination',),
+    }
