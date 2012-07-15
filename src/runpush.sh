@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#!/usr/bin/env bash
 if [ -e production ]; then
 	python "$(which twistd)" -l data/push.log --pidfile data/twistd-push.pid -y pushserver.py
 else

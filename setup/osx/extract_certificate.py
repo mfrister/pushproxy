@@ -92,7 +92,7 @@ def main():
 
     push_cert_file = join(CERT_PATH, apsd_prefs['CertificateName'] + '.pem')
 
-    cert_fh = sys.stderr
+    cert_fh = sys.stdout
     if len(sys.argv) > 1 and sys.argv[1] == '-f':
         cert_fh = open(push_cert_file, 'wb')
         sys.stderr.write('Writing private key and certificate to %s\n' %
