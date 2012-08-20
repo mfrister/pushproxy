@@ -135,7 +135,7 @@ You can verify your DNS setup using `dig`, it should show a similar answer for y
 
 #### iOS apsd patch
 
-This step assumes you have a codesign certificate in your keychain named `iPhone Developer`, if you prefer another name you can change `patch-apsd.sh`. You also need `ldid` on your iOS device, I'm note sure whether it comes with Cydia by default.
+This step assumes you have a codesign certificate in your keychain named `iPhone Developer`, if you prefer another name you can change `patch-apsd.sh`. You also need `ldid` on your iOS device, I'm not sure whether it comes with Cydia by default.
 
     cd pushproxy
     setup/ios/patch-apsd.sh <device hostname> <14-char DNS entry>
