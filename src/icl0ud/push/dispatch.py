@@ -50,7 +50,6 @@ class BaseDispatch(object):
 
 
 class BaseHandler(object):
-
     def handle(self, source, *args, **kwargs):
         raise NotImplementedError()
 
@@ -64,12 +63,11 @@ class LoggingHandler(BaseHandler):
 
 
 class HexdumpHandler(LoggingHandler):
-
     def __init__(self, fd, *args, **kwargs):
         self.fd = fd
         super(HexdumpHandler, self).__init__()
 
     def handle(self, source, msg, *args, **kwargs):
         self.fd.write(self.sourcePrefixMap[source] + '\n')
-        hexdump(msg, write_to_fd=self.fd)
+        hexdump(msg.rawData, write_to_fd=self.fd)
         self.fd.flush()

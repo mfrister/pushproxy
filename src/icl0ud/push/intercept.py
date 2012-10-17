@@ -7,14 +7,13 @@ from OpenSSL import SSL
 from twisted.internet import reactor, ssl, protocol
 from twisted.python import log
 
-from icl0ud.push.dispatch import BaseDispatch, BaseHandler
+from icl0ud.push.dispatch import BaseDispatch
 from icl0ud.push.parser import APSParser
-from icl0ud.utils.hexdump import hexdump
 
 
 class MessageProxy(protocol.Protocol, BaseDispatch, object):
     peer = None
-    peer_type = None # device or server
+    peer_type = None  # device or server
 
     def __init__(self):
         self._parser = APSParser()

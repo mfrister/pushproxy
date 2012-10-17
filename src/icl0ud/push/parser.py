@@ -58,6 +58,7 @@ class APSParser(object):
         while stream.tell() < length:
             message.addField(*self.parseField(stream))
         message.parsingFinished()
+        message.rawData = data
 
         return (message, length)
 

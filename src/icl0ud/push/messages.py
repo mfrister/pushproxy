@@ -21,6 +21,7 @@ class APSMessage(object):
             self.type = type_
         self.fields = []
         self.source = source
+        self.rawData = None
         for fieldType, fieldInfo in self.simpleFieldMapping.iteritems():
             value = kwargs.get(fieldInfo[0], None)
             setattr(self, fieldInfo[0], value)

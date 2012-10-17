@@ -2,7 +2,6 @@ import os.path
 import sys
 
 from twisted.application import internet, service
-from twisted.internet import ssl
 from twisted.python import log
 from twisted.spread import pb
 
@@ -29,7 +28,7 @@ pushNotificationSender = PushNotificationSender(pushTokenHandler)
 DISPATCH_HANDLERS = [LoggingHandler(),
                      pushTokenHandler,
                      pushNotificationSender,
-                     # HexdumpHandler(log_file),
+                     # HexdumpHandler(sys.stdout),
                      ]
 
 
@@ -63,4 +62,3 @@ internet.TCPServer(1234,
                    pb.PBServerFactory(pushNotificationSender),
                    interface='127.0.0.1') \
                   .setServiceParent(serviceCollection)
-
