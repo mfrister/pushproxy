@@ -7,7 +7,8 @@ except:
 
 basic_hosts = [
     'push.apple.com',
-    'courier.push.apple.com'
+    'courier.push.apple.com',
+    'init-p01st.push.apple.com',  # bag for OS X 10.8/iOS 6
 ]
 
 format_hosts = [
