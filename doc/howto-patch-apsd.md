@@ -13,7 +13,7 @@ ldid -e apsd
 
 
 * copy apsd from iOS device:
-<code>scp root@iphonelocal/System/Library/PrivateFrameworks/ApplePushService.framework/apsd .</code>
+<code>scp root@iphonelocal:/System/Library/PrivateFrameworks/ApplePushService.framework/apsd .</code>
 * edit using hex editor, search for `push.apple.com`. Replace using own domain with length of 14 characters.
     * automated: `perl -pi -e 's/push.apple.com/xxx.xxxxxx.xxx/g' apsd-patched`
 * create code signature and entitlements: `codesign -f -s "iPhone Developer" --entitlements entitlements.xml apsd-patched`
