@@ -186,6 +186,8 @@ Handlers can be configured in `src/pushserver.py`
 
 Apple provides a [document](http://developer.apple.com/library/ios/#technotes/tn2265/_index.html) on debugging push connections. Especially useful are their instructions on how to enable debug logging on iOS and OS X. You can find the download link to the configuration file for iOS in the upper right corner of the page.
 
+The document is a bit outdated. If you want to enable debug logging on newer OS X versions like 10.8.2, you have to replace `applepushserviced` with `apsd` in the `defaults` and `killall` commands.
+
 ## Contributors
 
 * Michael Frister
