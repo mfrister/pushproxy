@@ -79,6 +79,8 @@ class APSMessage(object):
         length = 0
         for type_, fieldInfo in self.simpleFieldMapping.iteritems():
             fieldValue = getattr(self, fieldInfo[0])
+            if fieldValue is None:  # ignore fields set to None
+                continue
             if len(fieldInfo) < 2 or fieldInfo[1] == 'str':
                 content = fieldValue
             elif fieldInfo[1] in('datetime32', 'datetime64'):
