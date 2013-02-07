@@ -110,8 +110,8 @@ class APSConnect(APSConnectBase):
     type = 0x07
     simpleFieldMapping = {
         1: ('pushToken',),
-        2: ('unknownByte',),
-        5: ('unknownField5',),  # observed on 10.8, darkWakeEnabled?
+        2: ('state',),
+        5: ('presenceFlags',),
     }
     knownValues = {
         2: ('\x01',),
@@ -122,11 +122,11 @@ class APSConnect(APSConnectBase):
 class APSConnectResponse(APSConnectBase):
     type = 0x08
     simpleFieldMapping = {
-        1: ('status',),
-        2: ('unknownField1',),
-        3: ('pushToken',),
-        4: ('unknownField2',),
-        5: ('unknownField3',),
+        1: ('connectedResponse',),
+        2: ('serverMetadata',),
+        3: ('pushToken',),  # TODO rename to token
+        4: ('messageSize',),
+        5: ('unknown5',),
     }
     knownValues = {
         1: ('\x00',  # ok
@@ -177,12 +177,17 @@ class APSNotification(APSMessage):
     type = 0x0a
     simpleFieldMapping = {
         1: ('recipientPushToken',),
-        2: ('topic',),
+        2: ('topic',),  # TODO rename to topicHash
         3: ('payload',),
-        4: ('responseToken',),
-        5: ('expires', 'datetime32'),
+        4: ('messageId',),
+        5: ('expires', 'datetime32'),  # TODO rename to expiry
         6: ('timestamp', 'datetime64'),
-        7: ('unknownString4',),
+        7: ('storageFlags',),
+          # seems to indicate whether the server has additional messages
+          # stored
+          # flags:  0x01: fromStorage
+          #         0x02: lastMessageFromStorage
+        9: ('unknown9',),  # ignored
     }
     topicDescriptions = {
         '45d4a8f8d83fdc7ba96233018fe1aa475fbccd6e': 'PhotoStream',
@@ -230,13 +235,13 @@ class APSNotification(APSMessage):
 class APSNotificationResponse(APSMessage):
     type = 0x0b
     simpleFieldMapping = {
-        4: ('responseToken',),
-        8: ('status',),
+        4: ('messageId',),
+        8: ('deliveryStatus',),
     }
     knownValues = {
-        8: ('\x00',  # nearly all messages - ok?
-            '\x02',  # error like in ServerHello?
-                     #  - only appeared in planb/log-2011-09-25T19-22-54-3.log
+        8: ('\x00',  # 'Message acknowledged by server'
+            '\x02',  # error like in ConnectResponse?
+            '\x03',  # 'Server rejected message as invalid'
            ),
     }
 

@@ -17,10 +17,10 @@ class TestMessages(unittest.TestCase):
             'recipientPushToken': 'fakeToken',
             'topic': '45d4a8f8d83fdc7ba96233018fe1aa475fbccd6e'.decode('hex'),
             'payload': "{fake: 'payload'}",
-            'responseToken': '\xde\xad\xbe\xef',
+            'messageId': '\xde\xad\xbe\xef',
             'expires': datetime(2011, 10, 30, 15, 52, 20, 335509),
             'timestamp': datetime(2011, 10, 29, 15, 52, 20, 335509),
-            'unknownString4': '\x00',
+            'storageFlags': '\x00',
         }
 
     def test_marshal_notification(self):
@@ -40,11 +40,11 @@ class TestMessages(unittest.TestCase):
                           fields['topic'])
         self.assertEquals(message.payload,
                           fields['payload'])
-        self.assertEquals(message.responseToken,
-                          fields['responseToken'])
+        self.assertEquals(message.messageId,
+                          fields['messageId'])
         self.assertEquals(message.expires,
                           'N\xadd\xa4')
         self.assertEquals(message.timestamp,
                           '\x12Q6\xbaf\t\xc8\x00')
-        self.assertEquals(message.unknownString4,
-                          fields['unknownString4'])
+        self.assertEquals(message.storageFlags,
+                          fields['storageFlags'])

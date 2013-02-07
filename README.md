@@ -47,14 +47,14 @@ I tested only using jailbroken iOS devices, but it may be possible to use a push
             {   'expires': datetime.datetime(1970, 1, 1, 0, 59, 59),
                 'payload': '{"aps":{"alert":"Eilmeldung\\nPortugal steht im EM-Halbfinale","sound":"gong.caf"}}',
                 'recipientPushToken': '4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05',
-                'responseToken': '\x00\x00\x00\x00',
+                'messageId': '\x00\x00\x00\x00',
                 'timestamp': datetime.datetime(2012, 6, 21, 22, 43, 12, 23465),
                 'topic': '0e3aae221b033cdc667259a5911659acecf9f9ad',
                 'topic_description': None,
                 'unknownString4': '\x00'}>
     [InterceptServer,3222,192.168.0.120] >>>
     [InterceptServer,3222,192.168.0.120] <None APSNotificationResponse type: b fields:
-            {   'responseToken': '\x00\x00\x00\x00', 'status': '\x00'}>
+            {   'messageId': '\x00\x00\x00\x00', 'status': '\x00'}>
 
 ## Setup
 

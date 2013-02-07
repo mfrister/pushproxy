@@ -13,16 +13,16 @@ from icl0ud.push.messages import APSNotification, APSNotificationResponse
 class PushNotificationSender(BaseHandler, pb.Root):
     def __init__(self, tokenHandler):
         self._tokenHandler = tokenHandler
-        self._responseTokens = {}
+        self._messageIds = {}
 
     def handle(self, source, message, deviceProtocol):
         if not isinstance(message, APSNotificationResponse):
             return True
-        if message.responseToken in self._responseTokens:
+        if message.messageId in self._messageIds:
             log.msg('PushNotificationSender: Found message with ' +
                     'self-issued response token: %s'
                     % repr(message))
-            del self._responseTokens[message.responseToken]
+            del self._messageIds[message.messageId]
             return False
         return True
 
@@ -32,22 +32,22 @@ class PushNotificationSender(BaseHandler, pb.Root):
         print 'PushNotificationSender: Sending to device: %s' % data.encode('hex')
         deviceProtocol.transport.write(data)
 
-    def generateResponseToken(self):
+    def generatemessageId(self):
         token = None
-        while token in self._responseTokens or token is None:
+        while token in self._messageIds or token is None:
             token = pack("!L", random.randint(0, 2**32-1))
-        self._responseTokens[token] = True
+        self._messageIds[token] = True
         return token
 
     def remote_sendNotification(self, pushToken, topic, payload):
         notification = APSNotification(
-            recipientPushToken = pushToken,
-            topic = topic,
-            payload = payload,
-            responseToken = self.generateResponseToken(),
-            expires = datetime.now() + timedelta(days=1),
-            timestamp = datetime.now(),
-            unknownString4 = '\x00',
+            recipientPushToken=pushToken,
+            topic=topic,
+            payload=payload,
+            messageId=self.generatemessageId(),
+            expires=datetime.now() + timedelta(days=1),
+            timestamp=datetime.now(),
+            storageFlags='\x00',
         )
 
         log.msg('PushNotificationSender: sendNotification')
