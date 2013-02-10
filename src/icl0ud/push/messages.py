@@ -117,7 +117,7 @@ class APSConnect(APSConnectBase):
     }
     knownValues = {
         2: ('\x01',),
-        5: ('\x00\x00\x00\x01',),
+        5: ('\x00\x00\x00\x01', '\x00\x00\x00\x02'),
     }
 
 
@@ -267,4 +267,12 @@ class APSNoStorage(APSMessage):
     type = 0x0e
     simpleFieldMapping = {
         1: ('destination',),
+    }
+
+
+class APSFlush(APSMessage):
+    type = 0x0f
+    simpleFieldMapping = {
+        1: ('flushWantPadding',),
+        2: ('padding',),
     }

@@ -138,6 +138,19 @@ Example *Connect* message
     * destination: push token as in Connect and Connect Response messages
 * Note: Appeared in 10.8, unknown purpose
 
+### 0f Command - Flush
+
+* Server -> Device and Device -> Server
+* `0f` message type
+* fields
+    * flushWantPadding: 2-byte integer indicating length of padding or length
+      padding requested for response
+    * padding: NULL-bytes, typical lengths: 64, 128, 256, 512 bytes
+* first observed with iOS 6.1, device response only seen via cellular
+  (iOS 6.0 not tested)
+* often 3 or 4 consecutive messages from the server, each with increasing
+  padding length
+
 ## Note
 
 Mac OS X' push notification is slightly more complicated since it supports multiple users. For example the device sends multiple *Connect* messages, one for the system and one for each user, each with a different push token. This needs to be analyzed further.
