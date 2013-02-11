@@ -55,11 +55,12 @@ class BaseHandler(object):
 
 
 class LoggingHandler(BaseHandler):
-    sourcePrefixMap = {'server': '<<<', 'device': '>>>'}
+    sourcePrefixMap = {'server': '<-', 'device': '->'}
 
     def handle(self, source, msg, deviceProtocol):
-        log.msg(self.sourcePrefixMap[source])
-        log.msg(msg)
+        direction = self.sourcePrefixMap[source]
+        sessionNo = deviceProtocol.transport.sessionno
+        log.msg('[#%d] %s ' % (sessionNo, direction) + str(msg))
 
 
 class HexdumpHandler(LoggingHandler):

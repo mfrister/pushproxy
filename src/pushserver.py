@@ -10,9 +10,6 @@ from icl0ud.push.notification_sender import PushNotificationSender
 from icl0ud.push.pushtoken_handler import PushTokenHandler
 from icl0ud.push.intercept import InterceptServerFactory
 
-# twisted logging takes over the whole FD :/
-#log.startLogging(sys.stdout)
-
 
 SERVER_CERT_PATH = os.path.join(os.path.curdir,
                    '../certs/courier.push.apple.com/server.pem')

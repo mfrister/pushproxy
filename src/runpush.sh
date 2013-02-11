@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ -e production ]; then
-	python "$(which twistd)" -l data/push.log --pidfile data/twistd-push.pid -y pushserver.py
+	python "$(which twistd)" --logger=icl0ud.logger.fileLogger --pidfile data/twistd-push.pid -y pushserver.py
 else
-	python "$(which twistd)" -l- -n --pidfile data/twistd-push.pid -y pushserver.py
+	python "$(which twistd)" --logger=icl0ud.logger.stdoutLogger -n --pidfile data/twistd-push.pid -y pushserver.py
 fi

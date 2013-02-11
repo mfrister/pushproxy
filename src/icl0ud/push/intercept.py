@@ -129,7 +129,6 @@ class InterceptServer(MessageProxy):
         # SSL.SSL_CB_HANDSHAKE_DONE(0x20) is missing in old pyOpenSSL releases
         if where & 0x20:
             try:   # Catch exceptions since this function does not throw them
-                log.msg('SSLInfoCallback: handshake done')
                 try:
                     # Twisted < 11.1
                     cert = self.transport.socket.get_peer_certificate()
@@ -138,11 +137,12 @@ class InterceptServer(MessageProxy):
                     cert = self.transport.getPeerCertificate()
                 subject = dict(cert.get_subject().get_components())
                 self.deviceCommonName = subject['CN']
-                log.msg('SSLInfoCallback: Device connected: %s' %
-                        self.deviceCommonName)
+                log.msg('[#%d] SSL handshake done: Device: %s' %
+                        (self.transport.sessionno, self.deviceCommonName))
                 self.connectToServer()
             except Exception:
-                log.err('SSLInfoCallback Exception:')
+                log.err('[#%d] SSLInfoCallback Exception:' %
+                        self.transport.sessionno)
                 log.err(traceback.format_exc())
 
     def connectionMade(self):
@@ -154,16 +154,19 @@ class InterceptServer(MessageProxy):
             # TODO Don't use private attribute _tlsConnection
             sslContext = self.transport._tlsConnection.get_context()
         sslContext.set_info_callback(self.SSLInfoCallback)
+        peer = self.transport.getPeer()
+        log.msg('[#%d] New connection from %s:%d' %
+                (self.transport.sessionno,
+                 peer.host, peer.port))
 
     def connectToServer(self):
         # Don't read anything from the connecting client until we have
         # somewhere to send it to.
         self.transport.pauseProducing()
-        log.msg('SSLInfoCallback: Device connected: %s' %
-                self.deviceCommonName)
         clientFactory = self.getClientFactory()
         host = random.choice(self.factory.hosts)
-        log.msg('connectToServer: ' + host)
+        log.msg('[#%d] Connecting to push server: %s:%d' %
+                (self.transport.sessionno, host, self.factory.port))
         reactor.connectSSL(host,
                            self.factory.port,
                            clientFactory,
@@ -202,7 +205,7 @@ class InterceptServer(MessageProxy):
 
         cert = os.path.join(certDir, self.deviceCommonName + '.pem')
         if not os.path.isfile(cert):
-            raise Exception('File does not exist: %s' % cert)
+            raise Exception('Device certificate is missing: %s' % cert)
 
         if self.clientContextFactory is None:
             self.clientContextFactory = InterceptClientContextFactory(

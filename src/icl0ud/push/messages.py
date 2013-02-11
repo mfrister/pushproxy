@@ -26,18 +26,21 @@ class APSMessage(object):
             value = kwargs.get(fieldInfo[0], None)
             setattr(self, fieldInfo[0], value)
 
-    def __repr__(self, fields=None):
+    def __str__(self, fields=None):
         if not fields:
             if self.simpleFieldMapping:
                 fields = self.fieldsAsDict()
             else:
                 fields = self.fields
 
-        return '<%s %s type: %x fields: \n%s>' % \
-               (self.source,
-                self.__class__.__name__,
+        return '<%s type: %x fields: \n%s>' % \
+               (self.__class__.__name__,
                 self.type,
                 pformat(fields, indent=4))
+
+    def __repr__(self, fields=None):
+        # TODO implement version that can be passed to eval
+        return self.__str__(fields)
 
     def addField(self, type_, content):
         self.fields.append((type_, content))
