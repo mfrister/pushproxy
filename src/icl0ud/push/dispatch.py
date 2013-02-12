@@ -56,8 +56,7 @@ class LoggingHandler(BaseHandler):
 
     def handle(self, source, msg, deviceProtocol):
         direction = self.sourcePrefixMap[source]
-        sessionNo = deviceProtocol.transport.sessionno
-        log.msg('[#%d] %s ' % (sessionNo, direction) + str(msg))
+        deviceProtocol.log(direction + ' ' + str(msg))
 
 
 class HexdumpHandler(LoggingHandler):

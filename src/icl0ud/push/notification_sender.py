@@ -2,13 +2,13 @@ import random
 from datetime import datetime, timedelta
 from struct import pack
 
-from twisted.python import log
 from twisted.spread import pb
 
 from icl0ud.push.dispatch import BaseHandler
 from icl0ud.push.messages import APSNotification, APSNotificationResponse
 
 # FIXME rename this module
+
 
 class PushNotificationSender(BaseHandler, pb.Root):
     def __init__(self, tokenHandler):
@@ -19,9 +19,9 @@ class PushNotificationSender(BaseHandler, pb.Root):
         if not isinstance(message, APSNotificationResponse):
             return True
         if message.messageId in self._messageIds:
-            log.msg('PushNotificationSender: Found message with ' +
-                    'self-issued response token: %s'
-                    % repr(message))
+            deviceProtocol.log('PushNotificationSender: Found message with ' +
+                               'self-issued response token: %s'
+                                % repr(message))
             del self._messageIds[message.messageId]
             return False
         return True
@@ -29,13 +29,14 @@ class PushNotificationSender(BaseHandler, pb.Root):
     def sendMessageToDevice(self, pushToken, message):
         deviceProtocol = self._tokenHandler.deviceProtocolForToken(pushToken)
         data = message.marshal()
-        print 'PushNotificationSender: Sending to device: %s' % data.encode('hex')
+        deviceProtocol.log('PushNotificationSender: Sending to device: ' +
+                           str(message))
         deviceProtocol.transport.write(data)
 
     def generatemessageId(self):
         token = None
         while token in self._messageIds or token is None:
-            token = pack("!L", random.randint(0, 2**32-1))
+            token = pack("!L", random.randint(0, 2 ** 32 - 1))
         self._messageIds[token] = True
         return token
 
@@ -49,8 +50,5 @@ class PushNotificationSender(BaseHandler, pb.Root):
             timestamp=datetime.now(),
             storageFlags='\x00',
         )
-
-        log.msg('PushNotificationSender: sendNotification')
-        log.msg(repr(notification))
         self.sendMessageToDevice(pushToken, notification)
         return 'notification sent'

@@ -9,16 +9,6 @@ from icl0ud.push import messages
 # TODO rename parser to a more appropriate description
 # TODO merge this with messages? - should be implemented analogue to marshalling
 class APSParser(object):
-    MESSAGE_TYPES = {
-        0x07: 'Client Hello',
-        0x08: 'Server Hello',
-        0x09: 'Push-enabled Topics',
-        0x0a: "Push Notification",
-        0x0b: 'Push Notification Confirmation',
-        0x0c: 'Keep-alive',
-        0x0d: 'Keep-alive Response',
-    }
-
     def __init__(self):
         self._typeCache = None
 
@@ -52,7 +42,7 @@ class APSParser(object):
         length = self.messageLength(data)
         stream = StringIO(data[0:length])
         messageType = ord(stream.read(1))
-        _ = stream.read(4)  # skip length
+        stream.read(4)  # skip length
 
         message = self.messageClassForType(messageType)(messageType)
         while stream.tell() < length:

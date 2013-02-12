@@ -1,5 +1,3 @@
-from twisted.python import log
-
 from icl0ud.push.dispatch import BaseHandler
 from icl0ud.push.messages import APSConnectBase
 
@@ -26,14 +24,12 @@ class PushTokenHandler(BaseHandler):
             return
 
         isNewToken = not pushToken in self.tokenProtocolMap
-        deviceId = deviceProtocol.deviceCommonName
-        log.msg('updatePushToken: device %s: push token: %s new: %s' %
-                    (deviceId, pushToken.encode('hex'), repr(isNewToken)))
+
+        if isNewToken:
+            msg = 'New push token: %s' % pushToken.encode('hex')
+            deviceProtocol.log(self.__class__.__name__ + ': ' + msg)
 
         self.tokenProtocolMap[pushToken] = deviceProtocol
 
     def deviceProtocolForToken(self, pushToken):
         return self.tokenProtocolMap[pushToken]
-
-
-
