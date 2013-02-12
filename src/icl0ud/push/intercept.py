@@ -41,11 +41,6 @@ class MessageProxy(protocol.Protocol, BaseDispatch, object):
 
     def sendToPeer(self, data):
         self.peer.transport.write(data)
-        # FIXME implement in own handler
-        # log.msg(repr(message))
-        # FIXME implement in own handler
-        # if hasattr(message, 'pushToken'):
-        #     self.updatePushToken(caller, message.pushToken)
 
     def connectionLost(self, reason):
         # TODO notify handlers

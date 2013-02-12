@@ -27,9 +27,6 @@ class BaseDispatch(object):
         self.handlers.pop(handler)
 
     def dispatch(self, source, message):
-        # FIXME implement a buffer for incomplete messages at some point
-        #  - otherwise they are discarded by PushMessageHandler
-        # This only works for device-to-server messages atm
         forwardMessage = True
 
         for handler in self.handlers:
@@ -37,10 +34,10 @@ class BaseDispatch(object):
                 deviceProtocol = self.getDeviceProtocol()
                 result = handler.handle(source, message, deviceProtocol)
                 if not result in (True, None):
-                    log.msg('BaseDispatch: Skipping message forward '+
+                    log.msg('BaseDispatch: Skipping message forward ' +
                             'due to %s' % handler.__class__.__name__)
                     forwardMessage = False
-            except Exception, e:
+            except Exception:
                 log.err(handler.__class__.__name__ + ': ' + \
                         traceback.format_exc())
                 log.err(source)
