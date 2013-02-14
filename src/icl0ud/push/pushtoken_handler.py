@@ -3,6 +3,8 @@ from icl0ud.push.messages import APSConnectBase
 
 
 class PushTokenHandler(BaseHandler):
+    _debug = False
+
     def __init__(self):
         self.tokenProtocolMap = {}
 
@@ -23,9 +25,7 @@ class PushTokenHandler(BaseHandler):
         if pushToken is None:
             return
 
-        isNewToken = not pushToken in self.tokenProtocolMap
-
-        if isNewToken:
+        if self._debug and not pushToken in self.tokenProtocolMap:
             msg = 'New push token: %s' % pushToken.encode('hex')
             deviceProtocol.log(self.__class__.__name__ + ': ' + msg)
 
