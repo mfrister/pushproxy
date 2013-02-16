@@ -1,13 +1,14 @@
+import json
+import time
 from datetime import datetime
 from pprint import pformat
 from struct import pack, unpack
 from StringIO import StringIO
-import time
 
 import biplist
 from twisted.python import log
 
-from topics import topicForHash, TOPIC_HASHES
+from topics import topicForHash
 
 
 FIELD_INDENTATION = ' ' * 35
@@ -17,6 +18,10 @@ DATE_FORMAT_MICROSECOND = DATE_FORMAT + '.%f'
 
 def hexEncodeIfNotNone(string):
     return string.encode('hex') if string is not None else '<none>'
+
+
+def indentLines(string):
+    return '\n'.join(map(lambda s: FIELD_INDENTATION + s, string.split('\n')))
 
 
 class APSMessage(object):
@@ -115,11 +120,12 @@ class APSMessage(object):
 
 
 class APSConnectBase(APSMessage):
-    def __repr__(self):
-        fields = self.fieldsAsDict()
-        if self.pushToken:
-            fields['pushToken'] = self.pushToken.encode('hex')
-        return super(APSConnectBase, self).__repr__(fields)
+    """Base class for APSConnect and APSConnectResponse
+
+    Used by pushtoken_handler to filter messages which define push tokens
+    for a connection.
+    """
+    pass
 
 
 class APSConnect(APSConnectBase):
@@ -135,14 +141,14 @@ class APSConnect(APSConnectBase):
     }
 
     def __str__(self):
-        string = '%s presenceFlags: %s state: %s' % \
-                (self.__class__.__name__,
-                 hexEncodeIfNotNone(self.presenceFlags),
-                 hexEncodeIfNotNone(self.state))
+        s = '{cls} presenceFlags: {presenceFlags} state: {state}'.format(
+                cls=self.__class__.__name__,
+                presenceFlags=hexEncodeIfNotNone(self.presenceFlags),
+                state=hexEncodeIfNotNone(self.state))
         if self.pushToken is not None:
-            string += '\n' + FIELD_INDENTATION + 'push token: ' + \
+            s += '\n' + FIELD_INDENTATION + 'push token: ' + \
                       hexEncodeIfNotNone(self.pushToken)
-        return string
+        return s
 
 
 class APSConnectResponse(APSConnectBase):
@@ -204,7 +210,7 @@ class APSTopics(APSMessage):
 
     def __str__(self):
         return ('%s for token %s\n' % (self.__class__.__name__,
-                                       self.pushToken.encode('hex')) +
+                                       hexEncodeIfNotNone(self.pushToken)) +
                 self.formatTopics(self.enabledTopics, 'enabled topics: ') +
                 '\n' +
                 self.formatTopics(self.disabledTopics, 'disabled topics:'))
@@ -251,49 +257,39 @@ class APSNotification(APSMessage):
             self.biplist = biplist.readPlist(StringIO(self.payload))
 
     def __str__(self):
-        fi = FIELD_INDENTATION
-        timestamp = float(unpack('!q', self.timestamp)[0]) / 1000000000
-        timestamp = datetime.fromtimestamp(timestamp)
-        expiry = datetime.fromtimestamp(unpack('!l', self.expires)[0])
-        expiry = timestamp.strftime(DATE_FORMAT_MICROSECOND)
+        timestamp = expiry = '<none>'
+        if self.timestamp is not None:
+            timestamp = float(unpack('!q', self.timestamp)[0]) / 1000000000
+            timestamp = datetime.fromtimestamp(timestamp) \
+                                .strftime(DATE_FORMAT_MICROSECOND)
+        if self.expires is not None:
+            expiry = datetime.fromtimestamp(unpack('!l', self.expires)[0]) \
+                             .strftime(DATE_FORMAT)
 
-        string = ("%s %s\n" % (self.__class__.__name__,
-                               topicForHash(self.topic)) +
-                  fi + 'timestamp: %s expires: %s\n' % (timestamp, expiry) +
-                  fi + 'messageId: %s                   storageFlags: %s\n' % (
-                                        hexEncodeIfNotNone(self.messageId),
-                                        hexEncodeIfNotNone(self.storageFlags)))
-        unknown9 = repr(self.unknown9)
-        indentation = ' ' * (37 - 10 - len(unknown9))
-        string += fi + 'unknown9: ' + unknown9 + indentation + '\n'
+        return ('{name} {topic}\n' +
+                '{ind}timestamp: {timestamp:<26} expiry: {expiry}\n' +
+                '{ind}messageId: {messageId:<26} storageFlags: {storageFlags}\n' +
+                '{ind}unknown9:  {unknown9!r:<26} {payload}').format(
+                    name=self.__class__.__name__,
+                    topic=topicForHash(self.topic) if self.topic else '<no topic>',
+                    timestamp=timestamp,
+                    expiry=expiry,
+                    messageId=hexEncodeIfNotNone(self.messageId),
+                    storageFlags=hexEncodeIfNotNone(self.storageFlags),
+                    unknown9=self.unknown9,
+                    payload=self.formatPayload(),
+                    ind=FIELD_INDENTATION)
 
+    def formatPayload(self):
         if self.biplist:
-            string += 'payload decoded (biplist)\n'
-            for line in pformat(self.biplist):
-                string += fi + line
-        else:
-            string += fi + repr(self.payload)
-        return string
-
-    def __repr__(self):
-        fields = self.fieldsAsDict()
-        if self.biplist:
-            fields['biplist'] = self.biplist
-            del fields['payload']
-        fieldsToHexEncode = ('topic', 'recipientPushToken')
-        for fieldName in fieldsToHexEncode:
-            if fields[fieldName]:
-                fields[fieldName] = fields[fieldName].encode('hex')
-
-        if self.topic is not None:
-            fields['topic_description'] = TOPIC_HASHES.get(self.topic, None)
-        if self.expires is not None and type(self.expires) == str:
-            fields['expires'] = datetime.fromtimestamp(unpack('!l', self.expires)[0])
-        if self.timestamp is not None and type(self.timestamp) == str:
-            seconds = float(unpack('!q', self.timestamp)[0]) / 1000000000
-            fields['timestamp'] = datetime.fromtimestamp(seconds)
-
-        return super(APSNotification, self).__repr__(fields)
+            return 'payload decoded (biplist)\n' + \
+                   indentLines(pformat(self.biplist))
+        try:
+            payload = 'payload decoded (json)\n' + \
+                      indentLines(pformat(json.loads(self.payload)))
+        except ValueError:
+            payload = '\n' + FIELD_INDENTATION + repr(payload)
+        return payload
 
 
 class APSNotificationResponse(APSMessage):
