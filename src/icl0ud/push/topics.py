@@ -7,10 +7,12 @@ TOPICS = [
     'com.apple.itunesu',
     'com.apple.jalisco',
     'com.apple.madrid',  # iMessage
+    'com.apple.maspushagent',
     'com.apple.mediastream.subscription.push',
     'com.apple.mobileme.fmf1',  # Find My Friends
     'com.apple.mobileme.fmip',  # Find My iPhone/Mac
     'com.apple.sagad',
+    'com.apple.sharedstreams',
     'com.apple.store.Jolly',
     'com.me.bookmarks',
     'com.me.btmm',  # Back To My Mac
