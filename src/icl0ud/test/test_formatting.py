@@ -1,4 +1,4 @@
-import unittest
+from twisted.trial import unittest
 from copy import deepcopy
 
 import biplist
@@ -7,7 +7,7 @@ from icl0ud.push import messages
 from icl0ud.test.sample_messages import NOTIFICATION_DICT
 
 
-class TestMessages(unittest.TestCase):
+class TestNotificationFormatting(unittest.TestCase):
     def setUp(self):
         self.dict = deepcopy(NOTIFICATION_DICT)
 
@@ -62,3 +62,30 @@ class TestMessages(unittest.TestCase):
                                    messageId: <none>                     storageFlags: <none>
                                    unknown9:  None                       payload decoded (json)
                                    {u'fake': u'payload'}''')
+
+
+class TestConnectFormatting(unittest.TestCase):
+    def test_connect(self):
+        connect = messages.APSConnect(pushToken='\x12push token',
+                                      state='\x01',
+                                      presenceFlags='\x00\x00\x00\x01')
+        formatted = str(connect)
+        self.assertEquals(formatted,
+                            '''APSConnect presenceFlags: 00000001 state: 01
+                                   push token: 127075736820746f6b656e''')
+
+
+class TestConnectResponseFormatting(unittest.TestCase):
+    def test_connect_response(self):
+        msg = messages.APSConnectResponse(connectedResponse='\x00',
+                                          serverMetadata=None,
+                                          pushToken='\x12push token',
+                                          messageSize='\x10\x00',
+                                          unknown5='\x00\x02')
+        formatted = str(msg)
+        self.assertEquals(formatted,
+                            '''APSConnectResponse 00 messageSize: 4096 unknown5: 0002
+                                   push token: 127075736820746f6b656e''')
+
+
+

@@ -171,9 +171,9 @@ class APSConnectBase(APSMessage):
 class APSConnect(APSConnectBase):
     type = 0x07
     fieldMapping = {
-        1: Field('pushToken'),
-        2: Field('state'),
-        5: Field('presenceFlags'),
+        1: Field('pushToken', 'hex'),
+        2: Field('state', 'hex'),
+        5: Field('presenceFlags', 'hex'),
     }
     knownValues = {
         2: ('\x01', '\x02'),
@@ -194,11 +194,11 @@ class APSConnect(APSConnectBase):
 class APSConnectResponse(APSConnectBase):
     type = 0x08
     fieldMapping = {
-        1: Field('connectedResponse',),
+        1: Field('connectedResponse', 'hex'),
         2: Field('serverMetadata'),
-        3: Field('pushToken'),  # TODO rename to token
+        3: Field('pushToken', 'hex'),  # TODO rename to token
         4: Field('messageSize'),
-        5: Field('unknown5'),
+        5: Field('unknown5', 'hex'),
     }
     knownValues = {
         1: ('\x00',  # ok
@@ -221,9 +221,9 @@ class APSConnectResponse(APSConnectBase):
                     self.formatField('unknown5'))
         if self.pushToken is not None:
             string += '\n' + FIELD_INDENTATION + 'push token: ' + \
-                      self.pushToken.encode('hex')
+                      self.formatField('pushToken')
         if self.serverMetadata is not None:
-            string += '\nserver metadata: ' + repr(self.serverMetadata)
+            string += '\nserver metadata: ' + self.formatField('serverMetadata')
         return string
 
 
