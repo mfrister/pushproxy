@@ -1,6 +1,7 @@
 import json
 import time
-from datetime import datetime
+from collections import namedtuple
+from datetime import datetime, timedelta
 from pprint import pformat
 from struct import pack, unpack
 from StringIO import StringIO
@@ -16,8 +17,9 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT_MICROSECOND = DATE_FORMAT + '.%f'
 
 
-def hexEncodeIfNotNone(string):
-    return string.encode('hex') if string is not None else '<none>'
+FieldT = namedtuple('Field', 'name type')
+def Field(name, typ=None):
+    return FieldT(name, typ)
 
 
 def indentLines(string):
@@ -39,8 +41,9 @@ class APSMessage(object):
         self.source = source
         self.rawData = None
         for fieldType, fieldInfo in self.fieldMapping.iteritems():
-            value = kwargs.get(fieldInfo[0], None)
-            setattr(self, fieldInfo[0], value)
+            value = kwargs.get(fieldInfo.name, None)
+            setattr(self, fieldInfo.name, value)
+            setattr(self, fieldInfo.name + '_fieldInfo', fieldInfo)
 
     def __str__(self):
         return self.__repr__()
@@ -62,14 +65,34 @@ class APSMessage(object):
         self.fields.append((type_, content))
         if type_ in self.fieldMapping:
             fieldInfo = self.fieldMapping[type_]
-            setattr(self, fieldInfo[0], content)
+            if fieldInfo.type:
+                content = self.unmarshalType(fieldInfo.type, content)
+                setattr(self, fieldInfo.name + '_marshalled', content)
+            setattr(self, fieldInfo.name, content)
         self.checkKnownValues(type_, content)
+
+    def unmarshalType(self, typ, content):
+        if typ == 'datetime64':
+            integer = unpack('!q', content)[0]
+            base = datetime.fromtimestamp(int(integer / 1e9))
+            # This reduces accuracy from nanoseconds to microseconds
+            microseconds = timedelta(microseconds=(integer % 1e9) / 1000)
+            return base + microseconds
+        elif typ == 'datetime32':
+            return datetime.fromtimestamp(unpack('!l', content)[0])
+        elif typ == 'hex':
+            return content
+        else:
+            print 'Warning: {}: Unknown type: {}'.format(
+                                                    self.__class__.__name__,
+                                                    typ)
+            return content
 
     def parsingFinished(self):
         pass
 
     def fieldsAsDict(self):
-        return dict([(fieldInfo[0], getattr(self, fieldInfo[0]))
+        return dict([(fieldInfo.name, getattr(self, fieldInfo.name))
                      for fieldType, fieldInfo
                      in self.fieldMapping.iteritems()])
 
@@ -97,19 +120,19 @@ class APSMessage(object):
         marshalledFields = []
         length = 0
         for type_, fieldInfo in self.fieldMapping.iteritems():
-            fieldValue = getattr(self, fieldInfo[0])
+            fieldValue = getattr(self, fieldInfo.name)
             if fieldValue is None:  # ignore fields set to None
                 continue
-            if len(fieldInfo) < 2 or fieldInfo[1] == 'str':
+            if not fieldInfo.type or fieldInfo.type in ('str', 'hex'):
                 content = fieldValue
-            elif fieldInfo[1] in('datetime32', 'datetime64'):
+            elif fieldInfo.type in('datetime32', 'datetime64'):
                 if type(fieldValue) == str:
                     content = fieldValue
-                elif fieldInfo[1] == 'datetime32':
+                elif fieldInfo.type == 'datetime32':
                     content = pack('!I', int(time.mktime(fieldValue.timetuple())))
-                elif fieldInfo[1] == 'datetime64':
+                elif fieldInfo.type == 'datetime64':
                     content = pack('!Q', int(time.mktime(fieldValue.timetuple()))
-                                         * 10 ** 9)
+                                         * 1e9 + fieldValue.microsecond * 1000)
             fieldLength = len(content)
             marshalledFields.append(chr(type_) +
                                     pack('!H', fieldLength) +
@@ -117,6 +140,23 @@ class APSMessage(object):
             length += fieldLength + 3
 
         return chr(self.type) + pack('!I', length) + ''.join(marshalledFields)
+
+    def fieldInfo(self, name):
+        return getattr(self, name + '_fieldInfo')
+
+    FIELD_FORMATTERS = {
+        'datetime32': lambda v: v.strftime(DATE_FORMAT),
+        'datetime64': lambda v: v.strftime(DATE_FORMAT_MICROSECOND),
+        'hex': lambda v: v.encode('hex'),
+    }
+
+    def formatField(self, name):
+        field = self.fieldInfo(name)
+        value = getattr(self, name)
+        if value is None:
+            return '<none>'
+        formatter = self.FIELD_FORMATTERS.get(field.type, lambda v: repr(v))
+        return formatter(value)
 
 
 class APSConnectBase(APSMessage):
@@ -131,9 +171,9 @@ class APSConnectBase(APSMessage):
 class APSConnect(APSConnectBase):
     type = 0x07
     fieldMapping = {
-        1: ('pushToken',),
-        2: ('state',),
-        5: ('presenceFlags',),
+        1: Field('pushToken'),
+        2: Field('state'),
+        5: Field('presenceFlags'),
     }
     knownValues = {
         2: ('\x01', '\x02'),
@@ -143,22 +183,22 @@ class APSConnect(APSConnectBase):
     def __str__(self):
         s = '{cls} presenceFlags: {presenceFlags} state: {state}'.format(
                 cls=self.__class__.__name__,
-                presenceFlags=hexEncodeIfNotNone(self.presenceFlags),
-                state=hexEncodeIfNotNone(self.state))
+                presenceFlags=self.formatField('presenceFlags'),
+                state=self.formatField('state'))
         if self.pushToken is not None:
             s += '\n' + FIELD_INDENTATION + 'push token: ' + \
-                      hexEncodeIfNotNone(self.pushToken)
+                      self.formatField('pushToken')
         return s
 
 
 class APSConnectResponse(APSConnectBase):
     type = 0x08
     fieldMapping = {
-        1: ('connectedResponse',),
-        2: ('serverMetadata',),
-        3: ('pushToken',),  # TODO rename to token
-        4: ('messageSize',),
-        5: ('unknown5',),
+        1: Field('connectedResponse',),
+        2: Field('serverMetadata'),
+        3: Field('pushToken'),  # TODO rename to token
+        4: Field('messageSize'),
+        5: Field('unknown5'),
     }
     knownValues = {
         1: ('\x00',  # ok
@@ -176,9 +216,9 @@ class APSConnectResponse(APSConnectBase):
                       else '<none>'
         string = '%s %s messageSize: %s unknown5: %s' % (
                     self.__class__.__name__,
-                    hexEncodeIfNotNone(self.connectedResponse),
+                    self.formatField('connectedResponse'),
                     messageSize,
-                    hexEncodeIfNotNone(self.unknown5))
+                    self.formatField('unknown5'))
         if self.pushToken is not None:
             string += '\n' + FIELD_INDENTATION + 'push token: ' + \
                       self.pushToken.encode('hex')
@@ -190,9 +230,9 @@ class APSConnectResponse(APSConnectBase):
 class APSTopics(APSMessage):
     type = 0x09
     fieldMapping = {
-        1: ('pushToken',),
-        2: ('enabledTopics',),
-        3: ('disabledTopics',),
+        1: Field('pushToken', 'hex'),
+        2: Field('enabledTopics'),
+        3: Field('disabledTopics'),
     }
 
     def __init__(self, *args, **kwargs):
@@ -210,7 +250,7 @@ class APSTopics(APSMessage):
 
     def __str__(self):
         return ('%s for token %s\n' % (self.__class__.__name__,
-                                       hexEncodeIfNotNone(self.pushToken)) +
+                                       self.formatField('pushToken')) +
                 self.formatTopics(self.enabledTopics, 'enabled topics: ') +
                 '\n' +
                 self.formatTopics(self.disabledTopics, 'disabled topics:'))
@@ -229,18 +269,18 @@ class APSTopics(APSMessage):
 class APSNotification(APSMessage):
     type = 0x0a
     fieldMapping = {
-        1: ('recipientPushToken',),
-        2: ('topic',),  # TODO rename to topicHash
-        3: ('payload',),
-        4: ('messageId',),
-        5: ('expires', 'datetime32'),  # TODO rename to expiry
-        6: ('timestamp', 'datetime64'),
-        7: ('storageFlags',),
+        1: Field('recipientPushToken'),
+        2: Field('topic'),  # TODO rename to topicHash
+        3: Field('payload'),
+        4: Field('messageId', 'hex'),
+        5: Field('expires', 'datetime32'),  # TODO rename to expiry
+        6: Field('timestamp', 'datetime64'),
+        7: Field('storageFlags', 'hex'),
           # seems to indicate whether the server has additional messages
           # stored
           # flags:  0x01: fromStorage
           #         0x02: lastMessageFromStorage
-        9: ('unknown9',),  # ignored
+        9: Field('unknown9'),  # ignored
     }
 
     def __init__(self, *args, **kwargs):
@@ -257,25 +297,16 @@ class APSNotification(APSMessage):
             self.biplist = biplist.readPlist(StringIO(self.payload))
 
     def __str__(self):
-        timestamp = expiry = '<none>'
-        if self.timestamp is not None:
-            timestamp = float(unpack('!q', self.timestamp)[0]) / 1000000000
-            timestamp = datetime.fromtimestamp(timestamp) \
-                                .strftime(DATE_FORMAT_MICROSECOND)
-        if self.expires is not None:
-            expiry = datetime.fromtimestamp(unpack('!l', self.expires)[0]) \
-                             .strftime(DATE_FORMAT)
-
         return ('{name} {topic}\n' +
                 '{ind}timestamp: {timestamp:<26} expiry: {expiry}\n' +
                 '{ind}messageId: {messageId:<26} storageFlags: {storageFlags}\n' +
                 '{ind}unknown9:  {unknown9!r:<26} {payload}').format(
                     name=self.__class__.__name__,
                     topic=topicForHash(self.topic) if self.topic else '<no topic>',
-                    timestamp=timestamp,
-                    expiry=expiry,
-                    messageId=hexEncodeIfNotNone(self.messageId),
-                    storageFlags=hexEncodeIfNotNone(self.storageFlags),
+                    timestamp=self.formatField('timestamp'),
+                    expiry=self.formatField('expires'),
+                    messageId=self.formatField('messageId'),
+                    storageFlags=self.formatField('storageFlags'),
                     unknown9=self.unknown9,
                     payload=self.formatPayload(),
                     ind=FIELD_INDENTATION)
@@ -288,15 +319,15 @@ class APSNotification(APSMessage):
             payload = 'payload decoded (json)\n' + \
                       indentLines(pformat(json.loads(self.payload)))
         except ValueError:
-            payload = '\n' + FIELD_INDENTATION + repr(payload)
+            payload = '\n' + FIELD_INDENTATION + repr(self.payload)
         return payload
 
 
 class APSNotificationResponse(APSMessage):
     type = 0x0b
     fieldMapping = {
-        4: ('messageId',),
-        8: ('deliveryStatus',),
+        4: Field('messageId', 'hex'),
+        8: Field('deliveryStatus', 'hex'),
     }
     knownValues = {
         8: ('\x00',  # 'Message acknowledged by server'
@@ -308,18 +339,18 @@ class APSNotificationResponse(APSMessage):
     def __str__(self):
         return '%s message: %s status: %s' % (
                     self.__class__.__name__,
-                    hexEncodeIfNotNone(self.messageId),
-                    hexEncodeIfNotNone(self.deliveryStatus))
+                    self.formatField('messageId'),
+                    self.formatField('deliveryStatus'))
 
 
 class APSKeepAlive(APSMessage):
     type = 0x0c
     fieldMapping = {
-        1: ('carrier',),
-        2: ('softwareVersion',),
-        3: ('softwareBuild',),
-        4: ('hardwareVersion',),
-        5: ('keepAliveInterval',),  # in minutes, as string
+        1: Field('carrier'),
+        2: Field('softwareVersion'),
+        3: Field('softwareBuild'),
+        4: Field('hardwareVersion'),
+        5: Field('keepAliveInterval'),  # in minutes, as string
     }
 
     def __str__(self):
@@ -341,19 +372,19 @@ class APSKeepAliveResponse(APSMessage):
 class APSNoStorage(APSMessage):
     type = 0x0e
     fieldMapping = {
-        1: ('destination',),
+        1: Field('destination', 'hex'),
     }
 
     def __str__(self):
         return '%s destination: %s' % (self.__class__.__name__,
-                                       hexEncodeIfNotNone(self.destination))
+                                       self.formatField('destination'))
 
 
 class APSFlush(APSMessage):
     type = 0x0f
     fieldMapping = {
-        1: ('flushWantPadding',),
-        2: ('padding',),
+        1: Field('flushWantPadding'),
+        2: Field('padding'),
     }
 
     def __str__(self):
