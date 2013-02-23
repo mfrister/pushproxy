@@ -2,59 +2,43 @@
 
 PushProxy is a **man-in-the-middle proxy** for **iOS and OS X Push Notifications**. It decodes the push protocol and outputs messages in a readable form. It also provides APIs for handling messages and sending push notifications directly to devices without sending them via Apple's infrastructure.
 
-For a reference on the push protocol, see `doc/apple-push-protocol-ios5-lion.md`. iOS4 and earlier used another version of the protocol, described in `doc/apple-push-protocol-ios4.md`. This proxy only supports the iOS5 protocol.
+For a reference on the push protocol, see [apple-push-protocol-ios5-lion.md](doc/apple-push-protocol-ios5-lion.md). iOS4 and earlier used another version of the protocol, described in [apple-push-protocol-ios4.md](doc/apple-push-protocol-ios4.md). This proxy only supports the iOS5 protocol.
 
 I tested only using jailbroken iOS devices, but it may be possible to use a push certificate from a jailbroken device and use it to connect a non-jailbroken device to Apple's servers. At least some apps using push notifications will be confused if you do this, but I think this was a way for hacktivated iPhones to get a push certificate.
 
 ## 'Screenshot'
 
-    [InterceptServer,3221,192.168.0.120] SSLInfoCallback: Device connected: B481816D-4650-49EA-977C-9FCBDEB30CB1
-    [InterceptServer,3221,192.168.0.120] connectToServer: 17.172.232.212
-    [InterceptServer,3221,192.168.0.120] Starting factory <icl0ud.push.intercept.InterceptClientFactory instance at 0x2ff15a8>
-    [InterceptServer,3221,192.168.0.120] >>>
-    [InterceptServer,3221,192.168.0.120] <None APSConnect type: 7 fields:
-            {   'pushToken': '4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05',
-                'unknownByte': '\x01'}>
-    [InterceptServer,3221,192.168.0.120] updatePushToken: device B481816D-4650-49EA-977C-9FCBDEB30CB1: push token: 4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05 new: False
-    [InterceptClient,client] <<<
-    [InterceptClient,client] <None APSConnectResponse type: 8 fields:
-            {   'pushToken': None,
-                'status': '\x00',
-                'unknownField1': None,
-                'unknownField2': '\x10\x00',
-                'unknownField3': '\x00\x02'}>
-    [InterceptServer,3221,192.168.0.120] >>>
-    [InterceptServer,3221,192.168.0.120] <None APSTopics type: 9 fields:
-            {   'disabledTopics': [   '8ef2ada7ec87dbb96f12d01c8bcae66218f2c7f2',
-                                        [...]
-                                      'acbd66c71146195b57b2424d3222204f3c97663e'],
-                'enabledTopics': [   '3514994361d84746222445d2deeab3440b22b5d6',
-                                        [...]
-                                     '7f292acab37bed771b36b09e612e395eee13a69a'],
-                'pushToken': None}>
-    [InterceptServer,3221,192.168.0.120] >>>
-    [InterceptServer,3221,192.168.0.120] <None APSKeepAlive type: c fields:
-            {   'carrier': '31038',
-                'hardwareVersion': 'iPhone4,1',
-                'keepAliveInterval': '10',
-                'softwareBuild': '9B206',
-                'softwareVersion': '5.1.1'}>
-    [InterceptClient,client] <<<
-    [InterceptClient,client] <None APSKeepAliveResponse type: d fields:
-            []>
-    [InterceptClient,client] <<<
-    [InterceptClient,client] <None APSNotification type: a fields:
-            {   'expires': datetime.datetime(1970, 1, 1, 0, 59, 59),
-                'payload': '{"aps":{"alert":"Eilmeldung\\nPortugal steht im EM-Halbfinale","sound":"gong.caf"}}',
-                'recipientPushToken': '4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05',
-                'messageId': '\x00\x00\x00\x00',
-                'timestamp': datetime.datetime(2012, 6, 21, 22, 43, 12, 23465),
-                'topic': '0e3aae221b033cdc667259a5911659acecf9f9ad',
-                'topic_description': None,
-                'unknownString4': '\x00'}>
-    [InterceptServer,3222,192.168.0.120] >>>
-    [InterceptServer,3222,192.168.0.120] <None APSNotificationResponse type: b fields:
-            {   'messageId': '\x00\x00\x00\x00', 'status': '\x00'}>
+    2013-02-17 21:54:15+0100 [#0] New connection from 192.168.0.120:61321
+    2013-02-17 21:54:15+0100 [#0] SSL handshake done: Device: B481816D-4650-49EA-977C-9FCBDEB30CB1
+    2013-02-17 21:54:15+0100 [#0] Connecting to push server: 17.172.232.59:5223
+    2013-02-17 21:54:15+0100 Starting factory <icl0ud.push.intercept.InterceptClientFactory instance at 0x147d5a8>
+    2013-02-17 21:54:15+0100 [#0] -> APSConnect presenceFlags: 00000002 state: 01
+                                       push token: 4b5543c35b48429bbe770a8af11457f39374bd4e43e94adaa86bd979c50bdb05
+    2013-02-17 21:54:16+0100 [#0] <- APSConnectResponse 00 messageSize: 4096 unknown5: 0002
+    2013-02-17 21:54:16+0100 [#0] -> APSTopics for token <none>
+                                       enabled topics: 
+                                         com.apple.itunesstored
+                                         com.apple.madrid
+                                         com.apple.mobileme.fmip
+                                         com.apple.gamed
+                                         com.apple.ess
+                                         com.me.keyvalueservice
+                                         4357ca2451b7b787caea8a603e51a1f45feaeda4
+                                         com.apple.mobileme.fmf1
+                                         com.apple.mediastream.subscription.push
+                                       disabled topics:
+                                         com.apple.store.Jolly
+    2013-02-17 21:54:16+0100 [#0] -> APSKeepAlive 10min carrier: 31038 iPhone4,1/6.1.1/10B145
+    2013-02-17 21:54:16+0100 [#0] <- APSKeepAliveResponse
+    2013-02-17 22:10:04+0100 [#0] <- APSNotification 4357ca2451b7b787caea8a603e51a1f45feaeda4
+                                       timestamp: 2013-02-17 22:10:16.642561 expiry: 1970-01-01 00:59:59
+                                       messageId: 00000000                   storageFlags: 00
+                                       unknown9:  None                       payload decoded (json)
+                                       {u'aps': {u'alert': u'Chrome\u2014meeee/pushproxy \xb7 GitHub\nhttps://github.com/meeee/pushproxy',
+                                                 u'badge': 3,
+                                                 u'sound': u'elysium.caf'},
+                                        u'urlhint': u'1234567'}
+    2013-02-17 22:10:06+0100 [#0] -> APSNotificationResponse message: 00000000 status: 00
 
 ## Setup
 
