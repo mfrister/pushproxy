@@ -42,6 +42,21 @@ I tested only using jailbroken iOS devices, but it may be possible to use a push
 
 ## Setup
 
+### Overview
+
+Setup on iOS >= 6.0 and OS X >= 10.8 requires several steps:
+
+1. [Install pushproxy including dependencies](#install-pushproxy-and-dependencies)
+2. [Create a CA and issue certificates](#create-ca-and-issue-certificates)
+3. [Install CA on device](#install-ca-on-device)
+4. [Extract and copy device certificate](#extract-and-copy-device-certificate)
+5. [Create configuration bag](#create-configuration-bag)
+6. [Redirect DNS](#redirect-dns)
+
+You can find instructions on how to redirect the push connection on iOS < 6.0 and OS X < 10.8 in [setup-ios5-10.7.md](doc/setup-ios5-10.7.md).
+
+### Install pushproxy and dependencies
+
 The proxy is written in Python, I recommend setting up a virtualenv and installing the requirements:
 
     pip install -r src/requirements.txt
@@ -50,23 +65,33 @@ Setting up PushProxy requires redirecting push connections to your server and se
 
 The push protocol uses SSL for client and server authentication. You need to extract the device certificate and give it to the proxy so it can authenticate itself as device against Apple. You also need to make the device trust your proxy since you are impersonating Apple's servers.
 
-### Server certificate
+### Create CA and issue certificates
 
-Note: This certificate creation only works for WiFi connections, see below if you want the proxy to work via 3G.
+Your device has to trust two certificates, so the easiest way is to create a CA and issue the certificates. This way you only need to install one CA certificate on the device.
 
-You need to create a SSL server certificate and install it on your device. It's common name should be:
+The first hostname you need to create a SSL server certificate for:
 
-    courier.push.apple.com
+    init-p01st.push.apple.com
 
-Then place the certificate in PEM encoding at the following path:
+You will need this certificate later to sign a configuration bag.
+
+You can choose the hostname of the second certificate, the push hostname. When connecting to the push hostname (Apple's default is courier.push.apple.com), apsd prepends a random number to the hostname, perhaps for load balancing and/or fault tolerance (e.g. 22-courier.push.apple.com). You need to configure a DNS server which responds to these hostnames. You can use a wildcard subdomain to redirect all host names with different numbers to the proxy, like `*.push.example.com`. So in this case, you would create a certificate for:
+
+    courier.push.example.com
+
+Store this certificate in PEM encoding at the following path:
 
     certs/courier.push.apple.com/server.pem
 
-You can install the certificate on iOS devices via Safari or iPhone Configuration Utility.
+
+### Install CA on device
+
+You can install the CA certificate on iOS devices via Safari or iPhone Configuration Utility.
 
 On OS X you can use keychain access to install the certificate, make sure to install it in the System keychain, not your login keychain. Mark it as trusted, Keychain Access should then display it as 'marked as trusted for all users'.
 
-### Extract iOS Certificates
+### Extract and copy device certificate
+#### Extract iOS Certificates
 
 First, download the [nimble](http://xs1.iphwn.org/releases/PushFix.zip) tool, extract `PushFix.zip` and place `nimble` into `setup/ios`. The following script will copy the tool to your iOS device, run it and copy the extracted certificates back to your computer. It assumes you have **SSH** running on your device. I recommend setting up key-based authentication, otherwise you will be typing your password a few times.
 
@@ -77,7 +102,7 @@ Make sure you are in the pushproxy root directory, otherwise the script will fai
 
 You can find the extracted certificates in `certs/device`. Both public and private key are in one PEM-file.
 
-### Extract OS X Certificates
+#### Extract OS X Certificates
 
 Note: If you want to connect at least one device via a patched push daemon, you need to patch the push daemon on OS X first.
 
@@ -89,53 +114,33 @@ This step extracts the push private key and certificate from the keychain. It st
 
 You can remove the -f parameter to get key and certificate on stdout instead of writing them to a file.
 
-### DNS redirect(WiFi only)
+### Create Configuration Bag
 
-The simplest way for redirecting a jailbroken iOS device or a Mac is modifying the `/etc/hosts` file. The following command will generate a hosts file for you. It may generate a few entries too much, but that shouldn't hurt.
+Since iOS 6 and OS X 10.8, apsd loads a signed configuration bag. This bag contains the push domain to connect to among a number of less interesting parameters.
 
-    python setup/generate-hosts-file.py <server ip> > hosts
+Apple's original bag can be found here: [http://init-p01st.push.apple.com/bag](http://init-p01st.push.apple.com/bag) (Download)
 
-You obviously need to copy the generated hosts file to your device.
+Run the following command to create a bag for your own domain:
 
-Make sure your device doesn't have network access via a phone network. In this case iOS ignores the `/etc/hosts` file and uses your carrier's DNS instead. **Disabling mobile data** should do the trick.
+    setup/bag.py <push domain> <signing certificate> > bag
 
-### Redirect via push daemon patch(WiFi+3G)
+*push domain*: The domain apsd should connect to, e.g. `courier.push.example.com`. apsd then actually connects to this domain prepended with a random number between 1 and 50, e.g. 22-courier.push.example.com.
 
-This method modifies the push daemons(apsd on iOS, applepushserviced on OS X) and replaces the string `push.apple.com` with a 14-character domain name of your choice.
+*signing certificate*: the previously created server certificate for `init-p01st.push.apple.com`. The script signs the bag using this certificate and includes it, so apsd can verify the signature.
 
-#### Preparation: DNS Setup
+You can either upload this bag to your own webserver or run the setup/bag.py command with a `-s` switch at the end. It starts a webserver on port 80, so you have to run the command as root. The webserver requires [flask](http://flask.pocoo.org/docs/), which can be installed via `pip install flask`.
 
-You need two DNS entries, one wildcard A-record and a TXT record.
+### Redirect DNS
 
-First, you have to choose a domain name. It must be exactly **14 characters** long like `push.apple.com`, so e.g. `ps.example.com` would work. (You could probably also use a shorter name and fill the remaining space with zero-bytes, but I haven't tried that).
+You can choose whatever method you want to redirect DNS, pushproxy includes a script to generate an `/etc/hosts` file. You can run it using the following command:
 
-The first DNS entry should be a **wildcard A-record** pointing to your servers IP, like `*.ps.example.com`.
+    setup/generate-hosts-file.py <webserver ip> > hosts
 
-An additional TXT record is used probably for determining the number of push domains the devices choose from. I set it to the same value `50` push.apple.com uses, but another one might also work. The content of this **TXT record** should look like ``"count=50"``.
+*webserver ip*: IP of your webserver that serves the configuration bag. apsd uses `init-p01st.push.apple.com` as HTTP host, so you can use a vhost for that domain if you want.
 
-You can verify your DNS setup using `dig`, it should show a similar answer for your server like it does for Apple's:
+When apsd fails to load the configuration bag, it uses the old iOS 5/OS X 10.7 method as fallback. Thus the generate-hosts-file command redirects all these hosts to 127.0.0.1 to ensure apsd only connects to pushproxy.
 
-    dig -t TXT push.apple.com
-
-#### iOS apsd patch
-
-This step assumes you have a codesign certificate in your keychain named `iPhone Developer`, if you prefer another name you can change `patch-apsd.sh`. You also need `ldid` on your iOS device, I'm not sure whether it comes with Cydia by default.
-
-    cd pushproxy
-    setup/ios/patch-apsd.sh <device hostname> <14-char DNS entry>
-
-You can find instructions on how to do this manually in `doc/howto-patch-apsd.md`
-
-#### OS X applepushserviced patch
-
-Like the iOS patch step, this step assumes there is a codesign certificate in your keychain named `iPhone Developer`.
-
-    cd pushproxy
-    setup/osx/patch-applepushserviced <14-char DNS entry>
-
-This modifies `/System/Library/PrivateFrameworks/ApplePushService.framework/applepushserviced` and place a backup in the same directory named `applepushserviced.orig`.
-
-After a restart the `applepushserviced` would request a new certificate from Apple since the binary has a new signature, so Keychain doesn't allow it to access the old certificate. So just do the 'Extract OS X Certificates' step which includes a restart anyway.
+You obviously need to copy the generated hosts file to the device.
 
 ## Running
 

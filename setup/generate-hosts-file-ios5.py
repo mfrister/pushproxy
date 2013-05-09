@@ -7,16 +7,14 @@ except:
     ip = None
 
 basic_hosts = [
+    'push.apple.com',
+    'courier.push.apple.com',
     'init-p01st.push.apple.com',  # bag for OS X 10.8/iOS 6
 ]
 
-localhost_hosts = [
-    'push.apple.com',
-    'courier.push.apple.com',
-]
-
-format_localhost_hosts = [
+format_hosts = [
     ('%d-courier.push.apple.com', 250),
+    ('%d.courier.push.apple.com', 250),
 ]
 
 
@@ -38,9 +36,6 @@ if ip:
     for host in basic_hosts:
         print "%s %s" % (ip, host)
 
-    for host in localhost_hosts:
-        print "%s %s" % ('127.0.0.1', host)
-
-    for host, count in format_localhost_hosts:
+    for host, count in format_hosts:
         for i in xrange(0, count):
-            print "%s %s" % ('127.0.0.1', host % i)
+            print "%s %s" % (ip, host % i)
