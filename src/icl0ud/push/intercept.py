@@ -251,6 +251,7 @@ class InterceptServerFactory(protocol.Factory):
 class InterceptServerContextFactory(ssl.DefaultOpenSSLContextFactory):
     def __init__(self, cert, chain):
         self.chain = chain
+        self.cert = cert
         ssl.DefaultOpenSSLContextFactory.__init__(self, cert, cert)
 
     def getContext(self):
@@ -258,6 +259,7 @@ class InterceptServerContextFactory(ssl.DefaultOpenSSLContextFactory):
         ctx.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
             self._verifyCallback)
         ctx.load_verify_locations(self.chain)
+        ctx.use_certificate_chain_file(self.cert)
         return ctx
 
     def _verifyCallback(self, conn, cert, errno, depth, preverifyOk):
