@@ -11,6 +11,9 @@ TOPICS = [
     'com.apple.mediastream.subscription.push',
     'com.apple.mobileme.fmf1',  # Find My Friends
     'com.apple.mobileme.fmip',  # Find My iPhone/Mac
+    'com.apple.private.ac',
+    'com.apple.private.alloy.maps',
+    'com.apple.private.ids',
     'com.apple.sagad',
     'com.apple.sharedstreams',
     'com.apple.store.Jolly',
