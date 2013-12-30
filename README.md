@@ -75,11 +75,32 @@ The first hostname you need to create a SSL server certificate for:
 
 You will need this certificate later to sign a configuration bag.
 
+#### iOS <= 6, OS X <= 10.8
+
 You can choose the hostname of the second certificate, the push hostname. When connecting to the push hostname (Apple's default is courier.push.apple.com), apsd prepends a random number to the hostname, perhaps for load balancing and/or fault tolerance (e.g. 22-courier.push.apple.com). You need to configure a DNS server which responds to these hostnames. You can use a wildcard subdomain to redirect all host names with different numbers to the proxy, like `*.push.example.com`. So in this case, you would create a certificate for:
 
     courier.push.example.com
 
-Store this certificate in PEM encoding at the following path:
+Store the generated certificate and private key in PEM encoding at the following path:
+
+    certs/courier.push.apple.com/server.pem
+
+
+#### iOS 7, OS X 10.9
+
+Beginning with OS X 10.9 and probably iOS 7 (untested), `apsd` does certificate pinning and checks the root certificate as well as chain length and some attributes of the leaf certificate. The root certificate contained in the `apsd` binary is replaced in a later step.
+
+The certificate chain needs a length of 3, so you have to use a CA certificate as well as an additional intermediary CA certificate that signs the leaf.
+
+Create the leaf certificate with the following attributes:
+
+    * Common Name: courier.push.apple.com
+    * Country Name: US
+    * State/Province Name: California
+    * Locality Name: Cupertino
+    * Organization Name: Apple Inc.
+
+Store the generated certificate, the intermediary CA certificate and the private key in PEM encoding at the following path:
 
     certs/courier.push.apple.com/server.pem
 
@@ -89,6 +110,24 @@ Store this certificate in PEM encoding at the following path:
 You can install the CA certificate on iOS devices via Safari or iPhone Configuration Utility.
 
 On OS X you can use keychain access to install the certificate, make sure to install it in the System keychain, not your login keychain. Mark it as trusted, Keychain Access should then display it as 'marked as trusted for all users'.
+
+### Patch apsd (OS X 10.9 and iOS 7 only)
+
+This patch replaces the pinned root certificate in the `apsd` binary with a chosen one having the same or a shorter length than the original certificate.
+
+You can run the script with the following command. When running the script, think about making a backup and make sure to restore permissions afterwards.
+
+    setup/osx/patch_apsd.py <path to apsd> <new root CA cert> <code signing identity>
+
+    <path to apsd>: Path to the apsd binary. Usually stored in `/System/Library/PrivateFrameworks/ApplePushService.framework/apsd`. You might need to copy it/change permissions to patch as a user.
+    <new root ca cert>: Path to a root certificate in PEM form to replace the original root certificate by Entrust. This certificate must be no longer than 1120 bytes (length of the original certificate). Shorter is ok, the rest will be zero-padded and the certificate size will be adjusted in the code.
+    <code signing identity>: Name of a code signing certificate understood by the `codesign` utility, make sure your machine trusts this cert (root)
+
+Make sure to do this before extracting the device certificate. Once you replaced the `apsd` binary, the keychain will not allow the apsd daemon to use the existing keychain any more and returns the following or a similar error:
+
+    The operation couldn’t be completed. (OSStatus error -25293.)
+
+When you restart/run `apsd` afterwards (`kill` or `launchctl`), after a few failing attempts to access the keychain, apsd will request a new push certificate, which you can then extract as describe in the following section.
 
 ### Extract and copy device certificate
 #### Extract iOS Certificates
