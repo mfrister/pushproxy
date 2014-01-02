@@ -88,7 +88,7 @@ Store the generated certificate and private key in PEM encoding at the following
 
 #### iOS 7, OS X 10.9
 
-Beginning with OS X 10.9 and probably iOS 7 (untested), `apsd` does certificate pinning and checks the root certificate as well as chain length and some attributes of the leaf certificate. The root certificate contained in the `apsd` binary is replaced in a later step.
+Beginning with OS X 10.9 and probably iOS 7, `apsd` does certificate pinning and checks the root certificate as well as chain length and some attributes of the leaf certificate. The root certificate contained in the `apsd` binary is replaced in a later step (although the patch only works for 10.9 yet and not for iOS7).
 
 The certificate chain needs a length of 3, so you have to use a CA certificate as well as an additional intermediary CA certificate that signs the leaf.
 
@@ -111,7 +111,7 @@ You can install the CA certificate on iOS devices via Safari or iPhone Configura
 
 On OS X you can use keychain access to install the certificate, make sure to install it in the System keychain, not your login keychain. Mark it as trusted, Keychain Access should then display it as 'marked as trusted for all users'.
 
-### Patch apsd (OS X 10.9 and iOS 7 only)
+### Patch apsd (OS X 10.9 only, iOS 7 not implemented yet)
 
 This patch replaces the pinned root certificate in the `apsd` binary with a chosen one having the same or a shorter length than the original certificate.
 
