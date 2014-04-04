@@ -120,7 +120,7 @@ You can run the script with the following command. When running the script, thin
     setup/osx/patch_apsd.py <path to apsd> <new root CA cert> <code signing identity>
 
     <path to apsd>: Path to the apsd binary. Usually stored in `/System/Library/PrivateFrameworks/ApplePushService.framework/apsd`. You might need to copy it/change permissions to patch as a user.
-    <new root ca cert>: Path to a root certificate in PEM form to replace the original root certificate by Entrust. This certificate must be no longer than 1120 bytes (length of the original certificate). Shorter is ok, the rest will be zero-padded and the certificate size will be adjusted in the code.
+    <new root ca cert>: Path to a root certificate in DER form to replace the original root certificate by Entrust. This certificate must be no longer than 1120 bytes (length of the original certificate, file size, not key length). Shorter is ok, the rest will be zero-padded and the certificate size will be adjusted in the code.
     <code signing identity>: Name of a code signing certificate understood by the `codesign` utility, make sure your machine trusts this cert (root)
 
 Make sure to do this before extracting the device certificate. Once you replaced the `apsd` binary, the keychain will not allow the apsd daemon to use the existing keychain any more and returns the following or a similar error:
