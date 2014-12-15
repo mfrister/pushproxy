@@ -7,33 +7,31 @@ from struct import pack
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         sys.stderr.write('Usage: %s <apsd binary path> ' % sys.argv[0] +
-                         '<root ca path> <codesign identity name>\n\n')
+                         '<root ca path> <intermediate ca path> <codesign identity name>\n\n')
         sys.exit(1)
 
     apsd_path = sys.argv[1]
-    certificate_path = sys.argv[2]
-    codesign_identity = sys.argv[3]
+    root_replacement = sys.argv[2]
+    intermediate_replacement = sys.argv[3]
+    codesign_identity = sys.argv[4]
 
-    certificate = read_file(certificate_path)
-    root_cert_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  '../../certs/entrust/entrust-root.der')
-    root_certificate = read_file(root_cert_path)
+    replacements = []
 
-    if len(root_certificate) < len(certificate):
-        raise ValueError('Root certificate is shorter than replacement')
+    cert_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             '../../certs/entrust')
+    root_original = os.path.join(cert_path, 'entrust-root.der')
+    replacements += replacements_for_certificates(root_original,
+                                                  root_replacement)
 
-    padding = '\x00' * (len(root_certificate) - len(certificate))
-
-    replacements = {
-        '\xb9\x60\x04\x00\x00': '\xb9' + pack('<i', len(certificate)),
-        root_certificate: certificate + padding
-    }
+    intermediate_original = os.path.join(cert_path, 'entrust-intermediate.der')
+    replacements += replacements_for_certificates(intermediate_original,
+                                                  intermediate_replacement)
 
     output_path = apsd_path + '-patched'
 
-    patch(apsd_path, replacements, output_path)
+    patch(apsd_path, dict(replacements), output_path)
 
     if not codesign(output_path, codesign_identity):
         raise Exception('Error: codesign failed.')
@@ -42,8 +40,26 @@ def main():
     print 'Success! Patched file written to %s' % output_path
 
 
+def replacements_for_certificates(original_path, replacement_path):
+    original = read_file(original_path)
+    replacement = read_file(replacement_path)
+
+    if len(original) < len(replacement):
+        raise ValueError('Root certificate is shorter than replacement')
+
+    padding = '\x00' * (len(original) - len(replacement))
+
+    return [
+        ('\xb9' + pack('<i', len(original)), '\xb9' + pack('<i', len(replacement))),
+        (original, replacement + padding)
+    ]
+
 def codesign(path, identity):
-    return not subprocess.call(['codesign', '-f', '-s', identity, path],
+    return not subprocess.call(['codesign',
+                                '--force',
+                                # '--preserve-metadata=entitlements',
+                                '--sign', identity,
+                                path],
                                stdout=sys.stdout,
                                stderr=sys.stderr)
 
