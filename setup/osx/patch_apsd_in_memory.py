@@ -17,6 +17,13 @@ def main():
 
     replacements = replacements_for_certificates(root_replacement,
                                                  intermediate_replacement)
+    replacements += [
+        # replace 'mov esi, 0x14' with 'mov esi, 0x04', i.e. disable
+        # kSecTrustOptionRequireRevPerCert.
+        ('__TEXT', '__text', 'BE14000000'.decode('hex'), 'BE04000000'.decode('hex'))
+        # Invalid instruction - check whether this is executed at all
+        # ('__TEXT', '__text', 'BE14000000'.decode('hex'), '0600000000'.decode('hex'))
+    ]
 
     replacer = ProcessMemoryReplacer('/System/Library/PrivateFrameworks/ApplePushService.framework/apsd')
     replacer.attach_and_stop(False)
@@ -56,6 +63,7 @@ def replacements_for_certificate(original_path, replacement_path):
 class ProcessMemoryReplacer(object):
     def __init__(self, process_name):
         self.process_name = process_name
+        self._section_data_cache = {}
 
     def attach_and_stop(self, wait_for_process=False):
         error = lldb.SBError()
@@ -77,7 +85,18 @@ class ProcessMemoryReplacer(object):
         self.thread = self.process.GetSelectedThread()
         self.frame = self.thread.GetSelectedFrame()
 
-    def replace(self, segment, section, needle, replacement):
+    def find_section(self, segment_name, section_name):
+        module = self.target.modules[0]
+        segment = [s for s in module.section_iter() if s.GetName() == segment_name][0]
+        section = [s for s in segment if s.GetName() == section_name][0]
+        return section
+
+    def section_data(self, section):
+        if not section.file_addr in self._section_data_cache:
+            self._section_data_cache[section.file_addr] = bytearray(section.data.uint8s)
+        return self._section_data_cache[section.file_addr]
+
+    def replace(self, segment_name, section_name, needle, replacement):
         """
         Search for needle in section within a segment. Use the needle's offset
         to begin writing the replacement there.
@@ -87,12 +106,11 @@ class ProcessMemoryReplacer(object):
         Also no checking is done whether needle appears multiple times in memory.
         In this case the first occurrence is silently used.
         """
-        module = self.target.modules[0]
-        text_segment = [s for s in module.section_iter() if s.GetName() == segment][0]
-        section = [s for s in text_segment if s.GetName() == section][0]
+        print "+ Looking for %d bytes" % len(needle)
+        section = self.find_section(segment_name, section_name)
         section_address = section.GetLoadAddress(self.target)
 
-        offset = bytearray(section.data.uint8s).find(needle)
+        offset = self.section_data(section).find(needle)
 
         print "+ Replacing %d bytes at 0x%x" % (len(replacement), section_address + offset)
 
