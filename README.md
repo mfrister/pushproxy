@@ -88,22 +88,23 @@ Store the generated certificate and private key in PEM encoding at the following
     certs/courier.push.apple.com/server.pem
 
 
-#### iOS 7, OS X 10.9
+#### iOS >= 7, OS X >= 10.9
 
-Beginning with OS X 10.9 and probably iOS 7, `apsd` does certificate pinning and checks the root certificate as well as chain length and some attributes of the leaf certificate. The root certificate contained in the `apsd` binary is replaced in a later step (although the patch only works for 10.9 yet and not for iOS7).
+Beginning with OS X 10.9 and probably iOS 7, `apsd` does some sort of certificate pinning and checks the root certificate as well as the chain length and some attributes of the leaf certificate. OS X 10.10.1 contains pinned certificates, but the checks are ineffective and a certificate with the right attributes trusted via a chain with the root in the System keychain is enough. I haven't tested this on 10.9, but the checks might also be less effective there than I thought previously.
 
-The certificate chain needs a length of 3, so you have to use a CA certificate as well as an additional intermediary CA certificate that signs the leaf.
+The certificate chain needs to have a length of 3, so you have to use a **CA** certificate as well as an **additional intermediary** CA certificate that signs the leaf.
 
 Create the leaf certificate with the following attributes:
 
     * Common Name: courier.push.apple.com
-    * Serial Number: 1277256594
     * Country Name: US
     * State/Province Name: California
     * Locality Name: Cupertino
     * Organization Name: Apple Inc.
     * Subject Alternative Name Extension
         * DNS Name: <the hostname you put into the bag>
+
+`apsd` checks the leaf certificate for these attributes. As it also does normal SSL certificate validation, the certificate must be valid for the host it connects to. This host is the name you put in the configuration bag. Luckily, we can use the Subject Alternative Name extension to make the certificate also valid for our hostname.
 
 Store the generated certificate, the intermediary CA certificate and the private key in PEM encoding at the following path:
 
@@ -116,16 +117,21 @@ You can install the CA certificate on iOS devices via Safari or iPhone Configura
 
 On OS X you can use keychain access to install the certificate, make sure to install it in the System keychain, not your login keychain. Mark it as trusted, Keychain Access should then display it as 'marked as trusted for all users'.
 
-### Patch apsd (OS X 10.9 only, iOS 7 not implemented yet)
+If you can't mark the CA as trusted for all users, you might have to remove the certificate from your login keychain, so you only have it in the system keychain.
+
+### Patch apsd (possibly optional)
+
+OS X 10.9 and iOS 7 had some sort of certificate pinning implemented, but this seems to be no longer the case in OS X 10.10.1. I haven't checked for anything else, but you might try without patching first.
 
 This patch replaces the pinned root certificate in the `apsd` binary with a chosen one having the same or a shorter length than the original certificate.
 
 You can run the script with the following command. When running the script, think about making a backup and make sure to restore permissions afterwards.
 
-    setup/osx/patch_apsd.py <path to apsd> <new root CA cert> <code signing identity>
+    setup/osx/patch_apsd.py <path to apsd> <new root CA cert> <new intermediate CA cert> <code signing identity>
 
     <path to apsd>: Path to the apsd binary. Usually stored in `/System/Library/PrivateFrameworks/ApplePushService.framework/apsd`. You might need to copy it/change permissions to patch as a user.
     <new root ca cert>: Path to a root certificate in DER form to replace the original root certificate by Entrust. This certificate must be no longer than 1120 bytes (length of the original certificate, file size, not key length). Shorter is ok, the rest will be zero-padded and the certificate size will be adjusted in the code.
+    <new intermediate CA cert> same as for new root cert, only for the intermediate cert
     <code signing identity>: Name of a code signing certificate understood by the `codesign` utility, make sure your machine trusts this cert (root)
 
 Make sure to do this before extracting the device certificate. Once you replaced the `apsd` binary, the keychain will not allow the apsd daemon to use the existing keychain any more and returns the following or a similar error:
@@ -221,6 +227,18 @@ Apple provides a [document](http://developer.apple.com/library/ios/#technotes/tn
 
 The document is a bit outdated. If you want to enable debug logging on newer OS X versions like 10.8.2, you have to replace `applepushserviced` with `apsd` in the `defaults` and `killall` commands.
 
+### Troubleshooting certificate trust problems
+
+* The push server certificate must always have a common name (CN) and the other attributes as specified above, even when the host in the bag is another one. The host in the bag has to be in the Subject Alternative Name extension. Since OS X 10.10 or possibly earlier, `apsd` compares the cert's CN against the hostname it connects to, in addition to an explicit check against `courier.push.apple.com` and `courier.sandbox.push.apple.com`.
+
+* If the logs don't give you enough information and you only see an error message like the following, you can use [dtrace for debugging](doc/debug-cert-verification-dtrace.md) the verification in detail.
+
+    ```
+    apsd[xx]: Failed to evaluate trust: No error. (0), result=5; retrying with revocation checking optional
+    apsd[xx]: Failed to evaluate trust: No error. (0), result=5; retrying with system roots
+    apsd[xx]: Failed to evaluate trust: No error. (0), result=5
+    ```
+
 ## Limitations
 
 ### Device certificates are not checked
@@ -239,5 +257,3 @@ PushProxy only checks there's a device certificate in in `certs/device/<common n
 
 * [Matt Johnston](http://www.ucc.asn.au/~matt/apple/) for writing [extractkeychain](http://www.ucc.asn.au/~matt/src/extractkeychain-0.1.tar.gz) that is used for deriving the master key and decrypting keys from the OS X keychain
 * Vladimir "Farcaller" Pouzanov for writing [python-bplist](https://github.com/farcaller/bplist-python) which is included and helps extracting the push private key from the OS X keychain
-
-![pi](https://planb.frister.net/pi/piwik.php?idsite=3&rec=1)
