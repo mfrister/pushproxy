@@ -1,4 +1,6 @@
 import os
+import subprocess
+import time
 import sys
 from struct import pack
 sys.path.append('/Library/Developer/CommandLineTools/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/Python')
@@ -7,22 +9,35 @@ import lldb
 
 
 def main():
-    if len(sys.argv) != 3:
-        sys.stderr.write('Usage: %s <root ca path> <intermediate ca path>\n' %
-                         sys.argv[0])
+    if len(sys.argv) != 4:
+        sys.stderr.write('Usage: %s <root ca path> <intermediate ca path> <leaf path>\n'
+                         '\n'
+                         'This kills apsd, runs it and patches it. apsd uses exponential backoff '
+                         'for server connections, so if the first few attempts fail, you\'ll '
+                         'have to wait for a while. Killing and automatically patching it '
+                         'solves this problem, although the first attempts might still fail, '
+                         'before the patches are applied. During patching, the apsd main thread '
+                         'is stopped.' % sys.argv[0])
         sys.exit(1)
 
-    root_replacement = sys.argv[1]
-    intermediate_replacement = sys.argv[2]
+    replacement_certs = sys.argv[1:4]
 
-    replacements = replacements_for_certificates(root_replacement,
-                                                 intermediate_replacement)
+    # Kill apsd to work around exponential backoff
+    # lldb has a wait-for-process feature, but when using this,
+    # section.GetLoadAddress(target) returns 2^64-1, probably an error.
+    # So we just kill it, wait, hope it's started and accept a few failed
+    # connections.
+    subprocess.check_call(['killall', 'apsd'])
+
+    # give apsd time to be restarted by launchd
+    time.sleep(0.2)
+
+    replacements = replacements_for_certificates(replacement_certs)
     replacements += [
         # replace 'mov esi, 0x14' with 'mov esi, 0x04', i.e. disable
-        # kSecTrustOptionRequireRevPerCert.
+        # kSecTrustOptionRequireRevPerCert. Not sure this is necessary, but it
+        # doesn't hurt (until this patch fails :))
         ('__TEXT', '__text', 'BE14000000'.decode('hex'), 'BE04000000'.decode('hex'))
-        # Invalid instruction - check whether this is executed at all
-        # ('__TEXT', '__text', 'BE14000000'.decode('hex'), '0600000000'.decode('hex'))
     ]
 
     replacer = ProcessMemoryReplacer('/System/Library/PrivateFrameworks/ApplePushService.framework/apsd')
@@ -33,16 +48,18 @@ def main():
     replacer.detach_and_continue()
 
 
-def replacements_for_certificates(root_replacement, intermediate_replacement):
+def replacements_for_certificates(replacements_certs):
     cert_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             '../../certs/entrust')
-    root_original = os.path.join(cert_path, 'entrust-root.der')
-    intermediate_original = os.path.join(cert_path, 'entrust-intermediate.der')
+                             '../../certs')
+    originals = [os.path.join(cert_path, 'entrust', 'entrust-root.der'),
+                 os.path.join(cert_path, 'entrust', 'entrust-intermediate.der'),
+                 os.path.join(cert_path, 'pins', 'leaf-1277256594.der')]
 
-    return replacements_for_certificate(root_original,
-                                        root_replacement) + \
-           replacements_for_certificate(intermediate_original,
-                                        intermediate_replacement)
+    replacements = []
+    for original, replacement in zip(originals, replacements_certs):
+        replacements += replacements_for_certificate(original, replacement)
+
+    return replacements
 
 def replacements_for_certificate(original_path, replacement_path):
     with open(original_path) as f: original = f.read()
@@ -55,6 +72,8 @@ def replacements_for_certificate(original_path, replacement_path):
     padding = '\x00' * (len(original) - len(replacement))
 
     return [
+        # replace 'mov ecx, <cert length>'
+        #  - let's hope this won't change :)
         ('__TEXT', '__text', '\xb9' + pack('<i', len(original)),
                              '\xb9' + pack('<i', len(replacement))),
         ('__TEXT', '__const', original, replacement + padding)
