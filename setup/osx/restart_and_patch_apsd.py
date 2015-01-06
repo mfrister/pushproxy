@@ -12,6 +12,11 @@ def main():
     if len(sys.argv) != 4:
         sys.stderr.write('Usage: %s <root ca path> <intermediate ca path> <leaf path>\n'
                          '\n'
+                         'Funny thing: At least on 10.10.1, you just don\'t need this.\n'
+                         '             apsd doesn\'t do any certificate pinning. It checks\n'
+                         '             things, but doesn\'t fail if the certificate is.\n'
+                         '             trusted in the keychain.\n'
+                         '\n'
                          'This kills apsd, runs it and patches it. apsd uses exponential backoff '
                          'for server connections, so if the first few attempts fail, you\'ll '
                          'have to wait for a while. Killing and automatically patching it '
