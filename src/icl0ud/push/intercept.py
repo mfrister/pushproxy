@@ -260,6 +260,13 @@ class InterceptServerContextFactory(ssl.DefaultOpenSSLContextFactory):
             self._verifyCallback)
         ctx.load_verify_locations(self.chain)
         ctx.use_certificate_chain_file(self.cert)
+
+        # Disable session cache - we don't want to configure it and
+        # performance is not important.
+        # Should fix 'session id context uninitialized' errors.
+        # Requires pyOpenSSL >= 0.14
+        ctx.set_session_cache_mode(SSL.SESS_CACHE_OFF)
+
         return ctx
 
     def _verifyCallback(self, conn, cert, errno, depth, preverifyOk):
