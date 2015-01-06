@@ -6,6 +6,8 @@ For a reference on the push protocol, see [apple-push-protocol-ios5-lion.md](doc
 
 I tested only using jailbroken iOS devices, but it may be possible to use a push certificate from a jailbroken device and use it to connect a non-jailbroken device to Apple's servers. At least some apps using push notifications will be confused if you do this, but I think this was a way for hacktivated iPhones to get a push certificate.
 
+**WARNING:** [PushProxy doesn't check device certificates](#device-certificates-are-not-checked) properly, so don't put it on the open internet.
+
 ## 'Screenshot'
 
     2013-02-17 21:54:15+0100 [#0] New connection from 192.168.0.120:61321
@@ -215,6 +217,15 @@ Handlers can be configured in `src/pushserver.py`
 Apple provides a [document](http://developer.apple.com/library/ios/#technotes/tn2265/_index.html) on debugging push connections. Especially useful are their instructions on how to enable debug logging on iOS and OS X. You can find the download link to the configuration file for iOS in the upper right corner of the page.
 
 The document is a bit outdated. If you want to enable debug logging on newer OS X versions like 10.8.2, you have to replace `applepushserviced` with `apsd` in the `defaults` and `killall` commands.
+
+## Limitations
+
+### Device certificates are not checked
+
+The intermediate certificate
+(`subject=/C=US/O=Apple Inc./OU=Apple iPhone/CN=Apple iPhone Device CA`) between Apple's root CA and the push device certificates expired on `Apr 16 22:54:46 2014 GMT` and I couldn't find a replacement. For a tool that is probably not usually used on the open internet, I thought implementing a workaround was too much effort, so I disabled device certificate checking.
+
+PushProxy only checks there's a device certificate in in `certs/device/<common name>.pem` and uses it to connect to Apple servers. Notice that the device certificate common names are transmitted in plain text, so they can't be considered secret. A connection with a fake certificate would fail later when pushproxy tries to connect to an Apple server, which hopefully does proper certificate validation. Nevertheless, an attacker could make PushProxy connect to Apple servers with a lot of fake certificates from your server, which you might not want. There might also be other implications I haven't thought about.
 
 ## Contributors
 

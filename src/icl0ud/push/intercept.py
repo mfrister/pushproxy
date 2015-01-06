@@ -263,4 +263,17 @@ class InterceptServerContextFactory(ssl.DefaultOpenSSLContextFactory):
         return ctx
 
     def _verifyCallback(self, conn, cert, errno, depth, preverifyOk):
-        return preverifyOk
+        # The following intermediate certificate expired on Apr 16 22:54:46 2014 GMT
+        #
+        # subject=/C=US/O=Apple Inc./OU=Apple iPhone/CN=Apple iPhone Device CA
+        #
+        # - skipping verification here. This makes things insecure,
+        # but let's hope not a lot of people are using pushproxy publicly
+        # anyway. VERIFY_PEER above is required, otherwise OpenSSL doesn't
+        # request a client certificate.
+        #
+        # If this is a problem, one might implement certificate checking based on
+        # the push certificates themselves instead of checking the chain.
+        # It could also be possible to manually check everything here and just
+        # ignore the expiry date for the specific certificate.
+        return True
