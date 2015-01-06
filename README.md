@@ -97,10 +97,13 @@ The certificate chain needs a length of 3, so you have to use a CA certificate a
 Create the leaf certificate with the following attributes:
 
     * Common Name: courier.push.apple.com
+    * Serial Number: 1277256594
     * Country Name: US
     * State/Province Name: California
     * Locality Name: Cupertino
     * Organization Name: Apple Inc.
+    * Subject Alternative Name Extension
+        * DNS Name: <the hostname you put into the bag>
 
 Store the generated certificate, the intermediary CA certificate and the private key in PEM encoding at the following path:
 
