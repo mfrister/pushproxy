@@ -56,7 +56,7 @@ class APSMessage(object):
             else:
                 fields = self.fields
 
-        return '<%s type: %x fields: \n%s>' % \
+        return '<%s type: 0x%x fields: \n%s>' % \
                (self.__class__.__name__,
                 self.type,
                 pformat(fields, indent=4))
@@ -111,7 +111,7 @@ class APSMessage(object):
                      value.encode('hex')))
             return
         if not value in self.knownValues[type_]:
-            log.err('%s: unknown value for field: %x value %s' % (
+            log.err('%s: unknown value for field: 0x%x value %s' % (
                     self.__class__.__name__,
                     type_,
                     value.encode('hex')))
@@ -173,11 +173,13 @@ class APSConnect(APSConnectBase):
     fieldMapping = {
         1: Field('pushToken', 'hex'),
         2: Field('state', 'hex'),
-        5: Field('presenceFlags', 'hex'),
+        5: Field('presenceFlags', 'hex'), # default user: 0x4, iOS: 0x2, OS X: 0x1? multi-user vs single?
     }
     knownValues = {
         2: ('\x01', '\x02'),
-        5: ('\x00\x00\x00\x01', '\x00\x00\x00\x02'),
+        5: ('\x00\x00\x00\x01',
+            '\x00\x00\x00\x02',
+            '\x00\x00\x00\x05'),
     }
 
     def __str__(self):
@@ -194,11 +196,12 @@ class APSConnect(APSConnectBase):
 class APSConnectResponse(APSConnectBase):
     type = 0x08
     fieldMapping = {
-        1: Field('connectedResponse', 'hex'),
+        1: Field('response', 'hex'),
         2: Field('serverMetadata'),
         3: Field('pushToken', 'hex'),  # TODO rename to token
         4: Field('messageSize'),
         5: Field('unknown5', 'hex'),
+        6: Field('unknown6', 'hex'),
     }
     knownValues = {
         1: ('\x00',  # ok
@@ -206,7 +209,8 @@ class APSConnectResponse(APSConnectBase):
                      #  - first try client sends push token, second try: no push
                      #    token in client hello - status for invalid push token?
             ),
-        4: ('\x10\x00',),
+        4: ('\x10\x00',  # <= OS X 10.9
+            '\x14\x00'), # OS X 10.10
         5: ('\x00\x02',),
     }
 
@@ -214,11 +218,12 @@ class APSConnectResponse(APSConnectBase):
         messageSize = str(unpack('!H', self.messageSize)[0]) \
                       if self.messageSize is not None \
                       else '<none>'
-        string = '%s %s messageSize: %s unknown5: %s' % (
+        string = '%s %s messageSize: %s unknown5: %s unknown6: %s' % (
                     self.__class__.__name__,
-                    self.formatField('connectedResponse'),
+                    self.formatField('response'),
                     messageSize,
-                    self.formatField('unknown5'))
+                    self.formatField('unknown5'),
+                    self.formatField('unknown6'))
         if self.pushToken is not None:
             string += '\n' + FIELD_INDENTATION + 'push token: ' + \
                       self.formatField('pushToken')
@@ -233,18 +238,26 @@ class APSTopics(APSMessage):
         1: Field('pushToken', 'hex'),
         2: Field('enabledTopics'),
         3: Field('disabledTopics'),
+        4: Field('opportunisticTopics'),
+        5: Field('pausedTopics'),
     }
 
     def __init__(self, *args, **kwargs):
         super(APSTopics, self).__init__(*args, **kwargs)
         self.enabledTopics = []
         self.disabledTopics = []
+        self.opportunisticTopics = []
+        self.pausedTopics = []
 
     def addField(self, type_, content):
         if type_ == 2:
             self.enabledTopics.append(content)
         elif type_ == 3:
             self.disabledTopics.append(content)
+        elif type_ == 4:
+            self.opportunisticTopics.append(content)
+        elif type_ == 5:
+            self.pausedTopics.append(content)
         else:
             super(APSTopics, self).addField(type_, content)
 
@@ -253,7 +266,11 @@ class APSTopics(APSMessage):
                                        self.formatField('pushToken')) +
                 self.formatTopics(self.enabledTopics, 'enabled topics: ') +
                 '\n' +
-                self.formatTopics(self.disabledTopics, 'disabled topics:'))
+                self.formatTopics(self.disabledTopics, 'disabled topics: ') +
+                '\n' +
+                self.formatTopics(self.opportunisticTopics, 'opportunistic topics: ') +
+                '\n' +
+                self.formatTopics(self.pausedTopics, 'paused topics:'))
 
     def formatTopics(self, topicHashes, prefix):
         topics = [topicForHash(hash) for hash in topicHashes]
@@ -393,3 +410,80 @@ class APSFlush(APSMessage):
                 unpack('!H', self.flushWantPadding)[0],
                 len(self.padding),
                 self.padding.encode('hex'))
+
+
+class APSFlushResponse(APSMessage):
+    type = 0x10
+    fieldMapping = {
+        2: Field('padding'),
+    }
+
+
+class APSAppTokenGenerateRequest(APSMessage):
+    type = 0x11
+    fieldMapping = {
+        1: Field('baseToken'),
+        2: Field('topicHash'),
+        3: Field('appId'),  # TwoByteItem
+    }
+
+    # TODO test and activate
+    # def __str__(self):
+    #     return '%s appId: %s\n%sbaseToken: %s\n%stopicHash: %s' % (
+    #             self.__class__.__name__,
+    #             self.formatField('appId'),
+    #             FIELD_INDENTATION,
+    #             self.baseToken.encode('hex'),
+    #             FIELD_INDENTATION,
+    #             self.topicHash.encode('hex'))
+
+
+class APSAppTokenGenerateResponse(APSMessage):
+    type = 0x12
+    fieldMapping = {
+        1: Field('code'),
+        2: Field('token'),
+        3: Field('topicHash'),
+    }
+
+    # TODO test and activate
+    # def __str__(self):
+    #     return '%s code: %s\n%stoken: %s\n%stopicHash: %s' % (
+    #             self.__class__.__name__,
+    #             self.formatField('code'),
+    #             FIELD_INDENTATION,
+    #             self.token.encode('hex'),
+    #             FIELD_INDENTATION,
+    #             self.topicHash.encode('hex'))
+
+
+class APSSetActiveInterval(APSMessage):
+    type = 0x13
+    fieldMapping = {
+        1: Field('interval'),
+    }
+
+    # TODO test and activate
+    # def __str__(self):
+    #     return '%s interval: %s' % (
+    #             self.__class__.__name__,
+    #             self.formatField('interval'))
+
+
+class APSSetActive(APSMessage):
+    type = 0x14
+    fieldMapping = {
+        1: Field('state'),
+        2: Field('interval'),
+    }
+
+    def __str__(self):
+        return '%s state: %s interval: %s' % (
+                self.__class__.__name__,
+                self.formatField('state'),
+                self.formatField('interval'))
+
+
+class APSSerial(APSMessage):
+    type = 0x19
+
