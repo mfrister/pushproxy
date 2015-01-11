@@ -152,6 +152,59 @@ Make sure you are in the pushproxy root directory, otherwise the script will fai
 
 You can find the extracted certificates in `certs/device`. Both public and private key are in one PEM-file.
 
+##### Alternative to nimble (Keychain-Dumper)
+
+On some newer devices, `nimble` might refuse to start with a message like `Illegal instruction: 4`.
+
+Thanks to [angelovAlex](https://github.com/angelovAlex) for having the idea and [documenting how to use Keychain-Dumper](https://github.com/meeee/pushproxy/issues/22#issuecomment-69500340), here's an alternative using a fork of [Keychain-Dumper](https://github.com/ptoomey3/Keychain-Dumper):
+
+To extract certificate from iOS device you need to download and compile Keychain-Dumper (modified version is here: https://github.com/reinitialized/Keychain-Dumper) and a binary should be signed. There's an instruction of how to sign the binary using self-signed certificate in Keychain-Dumper's README. Upload this binary to device and run it with ```-k```:
+```
+./KeychainDumper_signed -k
+```
+Find the key where label is ```APSClientIdentity``` and copy the key
+```
+Key
+---
+Entitlement Group: com.apple.apsd
+Label: APSClientIdentity
+Application Label: <XXXX>
+Key Class: Private
+Permanent Key: True
+Key Size: 1024
+Effective Key Size: 1024
+For Encryption: False
+For Decryption: True
+For Key Derivation: True
+For Signatures: True
+For Signature Verification: False
+For Key Wrapping: False
+For Key Unwrapping: True
+-----BEGIN RSA PRIVATE KEY-----
+XXXX
+-----END RSA PRIVATE KEY-----
+```
+Then run this tool with ```-i``` and copy certificate
+```
+./KeychainDumper_signed -i
+```
+```
+Identity
+--------
+Certificate
+-----------
+Summary: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXX                   // IDENTIFIER ! ! !
+Entitlement Group: com.apple.apsd
+Label: APSClientIdentity
+Serial Number: XXXX
+Subject Key ID: XXXX
+Subject Key Hash: XXXX
+-----BEGIN CERTIFICATE-----
+XXXX
+-----END CERTIFICATE-----
+```
+Put key and certificate in one file and rename it to the IDENTIFIER.pem and put this file in ```certs/device```.
+
 #### Extract OS X Certificates
 
 Note: If you want to connect at least one device via a patched push daemon, you need to patch the push daemon on OS X first.
